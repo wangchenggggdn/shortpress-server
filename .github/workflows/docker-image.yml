@@ -1,18 +1,42 @@
-name: Docker Image CI
+name: Build and Push Go Docker Image
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
-
+    branches: [ "main" ] 
+    tags: ['v*']
 jobs:
 
-  build:
-
-    runs-on: ubuntu-latest
-
+  build-and-push:
+    runs-on: ubuntu-latest  
+  
+    permissions:
+      contents: read      
+      packages: write     
+      
     steps:
-    - uses: actions/checkout@v4
-    - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag my-image-name:$(date +%s)
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/shortpress-server
+          tags: |
+            type=raw,value=latest
+            type=ref,event=branch
+            type=ref,event=tag
+      # 第 4 步：构建并推送 Docker 镜像
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true       # 告诉 Action 推送镜像
+          tags: ${{ steps.meta.outputs.tags }}    # 使用上一步生成的标签
+          labels: ${{ steps.meta.outputs.labels }} # 添加元数据
