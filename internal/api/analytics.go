@@ -1,0 +1,61 @@
+package api
+
+import "shortpress-server/internal/types"
+
+type IncomeTransactionsRequest struct {
+	SiteID    string `json:"siteId" binding:"required"`
+	UserEmail string `json:"userEmail"` // Optional user email for filtering
+	StartTime int64  `json:"startTime"` // Optional start timestamp
+	EndTime   int64  `json:"endTime"`   // Optional end timestamp
+	Page      int    `json:"page"`      // Optional page number
+	PageSize  int    `json:"pageSize"`  // Optional page size
+}
+
+type IncomeTransactionItem struct {
+	TransactionID string      `json:"transactionId"`
+	Email         string      `json:"email"`
+	Name          string      `json:"name"`
+	Amount        types.Money `json:"amount"`
+	Provider      string      `json:"provider"`
+	Description   string      `json:"description,omitempty"`
+	CreatedAt     int64       `json:"createdAt"`
+}
+
+type IncomeTransactionHistoryResponse struct {
+	Items    []*IncomeTransactionItem `json:"items"`
+	Total    int64                    `json:"total"`
+	Page     int                      `json:"page"`
+	PageSize int                      `json:"pageSize"`
+}
+
+type IncomeStatisticsRequest struct {
+	SiteID    string `json:"siteId" binding:"required"`
+	StartTime int64  `json:"startTime"` // Optional start timestamp
+	EndTime   int64  `json:"endTime"`   // Optional end timestamp
+}
+
+type DailyIncomeStatistics struct {
+	Date             string      `json:"date"`             // Date in YYYY-MM-DD format
+	TotalAmount      types.Money `json:"totalAmount"`      // Total income for the day
+	TransactionCount int         `json:"transactionCount"` // Number of successful transactions
+}
+
+type IncomeStatisticsResponse struct {
+	Items []DailyIncomeStatistics `json:"items"` // Daily statistics records
+}
+
+// IncomeTransactionDetailResponse represents detailed information about a payment transaction
+type IncomeTransactionDetailResponse struct {
+	TransactionID string      `json:"transactionId"`
+	Name          string      `json:"name"`
+	UserID        string      `json:"userId"`
+	Email         string      `json:"email"`
+	Amount        types.Money `json:"amount"`
+	Currency      string      `json:"currency"`
+	Provider      string      `json:"provider"`
+	PaymentType   int         `json:"paymentType"`
+	Status        int         `json:"status"`
+	RelatedID     string      `json:"relatedId,omitempty"`
+	RelatedType   int         `json:"relatedType,omitempty"`
+	CreatedAt     int64       `json:"createdAt"`
+}

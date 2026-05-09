@@ -1,0 +1,5837 @@
+definitions:
+  internal_handler.ActiveCallRequest:
+    properties:
+      actions:
+        description: action 列表
+        items:
+          $ref: '#/definitions/shortpress-server_internal_plugins.ActionParams'
+        type: array
+      hook:
+        description: hook 类型
+        type: string
+    required:
+    - actions
+    - hook
+    type: object
+  internal_handler.InstallPluginRequest:
+    properties:
+      config:
+        description: 插件配置（可选，JSON格式）
+        type: string
+      plugin_id:
+        description: 插件ID
+        type: string
+    required:
+    - plugin_id
+    type: object
+  internal_handler.RegisterPluginRequest:
+    properties:
+      author:
+        description: 插件作者
+        type: string
+      description:
+        description: 插件描述
+        type: string
+      name:
+        description: 插件名称
+        type: string
+      type:
+        description: 插件类型：payment, content, analytics 等
+        type: string
+      version:
+        description: 插件版本
+        type: string
+    required:
+    - name
+    - type
+    type: object
+  internal_handler.UninstallPluginRequest:
+    properties:
+      plugin_id:
+        description: 插件ID
+        type: string
+    required:
+    - plugin_id
+    type: object
+  shortpress-server_internal_api.AdUnit:
+    properties:
+      adNetwork:
+        type: string
+      clientId:
+        type: string
+      format:
+        type: integer
+      frequency:
+        type: integer
+      id:
+        type: string
+      name:
+        type: string
+      page:
+        type: string
+      siteId:
+        type: string
+      status:
+        type: integer
+      unitId:
+        type: string
+    required:
+    - adNetwork
+    - name
+    - page
+    - siteId
+    type: object
+  shortpress-server_internal_api.AdUnitConf:
+    properties:
+      adNetwork:
+        description: Ad network platform (e.g., AdMob, Facebook)
+        type: string
+      conf:
+        additionalProperties: true
+        description: Ad configuration values
+        type: object
+      format:
+        description: Ad format type
+        type: integer
+      page:
+        description: Ad location on the page
+        type: string
+      showStg:
+        additionalProperties: true
+        description: Show strategy values
+        type: object
+      status:
+        type: integer
+    type: object
+  shortpress-server_internal_api.AdUnitListResponseData:
+    properties:
+      items:
+        description: Ad unit list
+        items:
+          $ref: '#/definitions/shortpress-server_internal_api.AdUnit'
+        type: array
+    type: object
+  shortpress-server_internal_api.BuyContentWithCoinsRequest:
+    properties:
+      contentId:
+        description: ID of content to purchase (video or playlist)
+        type: string
+      contentType:
+        description: Type of content (video or playlist)
+        enum:
+        - video
+        - playlist
+        type: string
+      playlistId:
+        description: If content is a video in a playlist
+        type: string
+    required:
+    - contentId
+    - contentType
+    type: object
+  shortpress-server_internal_api.BuyContentWithCoinsResponse:
+    properties:
+      balance:
+        description: New balance after purchase
+        type: integer
+      coinCost:
+        description: Amount of coins spent
+        type: integer
+      transactionId:
+        description: ID of the coin transaction
+        type: string
+    type: object
+  shortpress-server_internal_api.CoinPackageCreateRequest:
+    properties:
+      coinAmount:
+        minimum: 1
+        type: integer
+      description:
+        type: string
+      discountPercentage:
+        type: integer
+      features:
+        description: Array of feature highlights, e.g. ["买100送20", "限时优惠"]
+        items:
+          type: integer
+        type: array
+      name:
+        type: string
+      originalPrice:
+        type: integer
+      price:
+        type: integer
+      siteId:
+        type: string
+    required:
+    - coinAmount
+    - name
+    - price
+    - siteId
+    type: object
+  shortpress-server_internal_api.CoinPackageCreateResponse:
+    properties:
+      packageId:
+        type: string
+    type: object
+  shortpress-server_internal_api.CoinPackageModifyRequest:
+    properties:
+      description:
+        type: string
+      features:
+        description: Array of feature highlights, e.g. ["买100送20", "限时优惠"]
+        items:
+          type: integer
+        type: array
+      name:
+        type: string
+      packageId:
+        type: string
+      siteId:
+        type: string
+      status:
+        type: integer
+    required:
+    - packageId
+    - siteId
+    type: object
+  shortpress-server_internal_api.CoinPackageModifyResponse:
+    properties:
+      packageId:
+        type: string
+    type: object
+  shortpress-server_internal_api.CoinPackageResponseData:
+    properties:
+      coinAmount:
+        type: integer
+      currency:
+        type: string
+      description:
+        type: string
+      discountPercentage:
+        type: integer
+      features:
+        description: Array of feature highlights, e.g. ["买100送20", "限时优惠"]
+        items:
+          type: integer
+        type: array
+      name:
+        type: string
+      originalPrice:
+        type: integer
+      packageId:
+        type: string
+      price:
+        type: integer
+      status:
+        type: integer
+    type: object
+  shortpress-server_internal_api.CoinTransactionHistoryResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/shortpress-server_internal_api.CoinTransactionResponse'
+        type: array
+      page:
+        type: integer
+      pageSize:
+        type: integer
+      total:
+        type: integer
+    type: object
+  shortpress-server_internal_api.CoinTransactionResponse:
+    properties:
+      amount:
+        type: integer
+      balance:
+        type: integer
+      beforeBalance:
+        type: integer
+      createdAt:
+        description: Snapshot       map[string]interface{} `json:"snapshot,omitempty"`
+        type: integer
+      description:
+        type: string
+      relatedType:
+        description: RelatedID      string                 `json:"relatedId,omitempty"`
+        type: integer
+      source:
+        type: string
+      transactionId:
+        type: string
+    type: object
+  shortpress-server_internal_api.CompleteGuidesRequest:
+    properties:
+      guides:
+        example:
+        - '["guide1"'
+        - '"guide2"]'
+        items:
+          type: string
+        type: array
+    required:
+    - guides
+    type: object
+  shortpress-server_internal_api.CreatorGuides:
+    properties:
+      name:
+        type: string
+      status:
+        description: 1 Completed, other values Incomplete
+        type: integer
+    type: object
+  shortpress-server_internal_api.CreatorLoginRequest:
+    properties:
+      email:
+        description: Email corresponds to the email field in MySQL table, type VARCHAR(255),
+          cannot be null
+        example: user@example.com
+        type: string
+      password:
+        description: Password corresponds to the plaintext password used for password
+          verification in MySQL table, type VARCHAR(255), cannot be null
+        example: secret
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  shortpress-server_internal_api.CreatorProfileData:
+    properties:
+      avatarUrl:
+        description: AvatarURL
+        example: http://example.com/avatar.jpg
+        type: string
+      createdAt:
+        description: CreatedAt Creation time, Unix timestamp
+        example: "1609459200"
+        type: string
+      defultSiteDomain:
+        description: DefaultDomain
+        example: https://myshortpress.ai
+        type: string
+      email:
+        description: Email
+        example: user@example.com
+        type: string
+      guides:
+        description: New task guides
+        items:
+          $ref: '#/definitions/shortpress-server_internal_api.CreatorGuides'
+        type: array
+      nickname:
+        description: Nickname
+        example: JohnDoe
+        type: string
+      updatedAt:
+        description: UpdatedAt Update time, Unix timestamp
+        example: "1609545600"
+        type: string
+    type: object
+  shortpress-server_internal_api.CreatorProfileResponse:
+    properties:
+      code:
+        type: integer
+      data:
+        $ref: '#/definitions/shortpress-server_internal_api.CreatorProfileData'
+      info:
+        type: string
+    type: object
+  shortpress-server_internal_api.CreatorStatsResponseData:
+    properties:
+      playlistCount:
+        example: 10
+        type: integer
+      siteCount:
+        example: 1
+        type: integer
+      videoCount:
+        example: 100
+        type: integer
+    type: object
+  shortpress-server_internal_api.DailyIncomeStatistics:
+    properties:
+      date:
+        description: Date in YYYY-MM-DD format
+        type: string
+      totalAmount:
+        description: Total income for the day
+        type: integer
+      transactionCount:
+        description: Number of successful transactions
+        type: integer
+    type: object
+  shortpress-server_internal_api.GetPagesBuilderDataResponse:
+    properties:
+      created_at:
+        example: 1672531199
+        type: integer
+      created_by:
+        example: 550e8400-e29b-41d4-a716-446655440001
+        type: string
+      last_published_version:
+        example: 1
+        type: integer
+      site_data: {}
+      site_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      updated_at:
+        example: 1672531199
+        type: integer
+      version_number:
+        example: 1
+        type: integer
+    type: object
+  shortpress-server_internal_api.GetPublishHistoryResponse:
+    properties:
+      history:
+        items:
+          $ref: '#/definitions/shortpress-server_internal_api.PublishHistoryItem'
+        type: array
+      site_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      total:
+        example: 5
+        type: integer
+    type: object
+  shortpress-server_internal_api.GetSitePagesResponse:
+    properties:
+      published_at:
+        example: 1672531199
+        type: integer
+      site_data: {}
+      site_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      version_number:
+        example: 1
+        type: integer
+    type: object
+  shortpress-server_internal_api.GrantCoinsRequest:
+    properties:
+      coinAmount:
+        minimum: 1
+        type: integer
+      reason:
+        maxLength: 255
+        type: string
+      siteId:
+        type: string
+      userEmail:
+        type: string
+    required:
+    - coinAmount
+    - siteId
+    - userEmail
+    type: object
+  shortpress-server_internal_api.GrantCoinsResponse:
+    properties:
+      amountAdded:
+        type: integer
+      currentBalance:
+        type: integer
+      transactionId:
+        type: string
+      userEmail:
+        type: string
+    type: object
+  shortpress-server_internal_api.IDListResponseData-shortpress-server_internal_api_PlaylistSlugItem:
+    properties:
+      hasMore:
+        description: Whether there are more items
+        example: true
+        type: boolean
+      items:
+        description: ID information list
+        items:
+          $ref: '#/definitions/shortpress-server_internal_api.PlaylistSlugItem'
+        type: array
+      page:
+        description: Current page number
+        example: 1
+        type: integer
+      pageSize:
+        description: Items per page
+        example: 20
+        type: integer
+      total:
+        description: Total number of videos
+        example: 100
+        type: integer
+    type: object
+  shortpress-server_internal_api.IDListResponseData-shortpress-server_internal_api_VideoItem:
+    properties:
+      hasMore:
+        description: Whether there are more items
+        example: true
+        type: boolean
+      items:
+        description: ID information list
+        items:
+          $ref: '#/definitions/shortpress-server_internal_api.VideoItem'
+        type: array
+      page:
+        description: Current page number
+        example: 1
+        type: integer
+      pageSize:
+        description: Items per page
+        example: 20
+        type: integer
+      total:
+        description: Total number of videos
+        example: 100
+        type: integer
+    type: object
+  shortpress-server_internal_api.IDListResponseData-string:
+    properties:
+      hasMore:
+        description: Whether there are more items
+        example: true
+        type: boolean
+      items:
+        description: ID information list
+        items:
+          type: string
+        type: array
+      page:
+        description: Current page number
+        example: 1
+        type: integer
+      pageSize:
+        description: Items per page
+        example: 20
+        type: integer
+      total:
+        description: Total number of videos
+        example: 100
+        type: integer
+    type: object
+  shortpress-server_internal_api.IncomeStatisticsRequest:
+    properties:
+      endTime:
+        description: Optional end timestamp
+        type: integer
+      siteId:
+        type: string
+      startTime:
+        description: Optional start timestamp
+        type: integer
+    required:
+    - siteId
+    type: object
+  shortpress-server_internal_api.IncomeStatisticsResponse:
+    properties:
+      items:
+        description: Daily statistics records
+        items:
+          $ref: '#/definitions/shortpress-server_internal_api.DailyIncomeStatistics'
+        type: array
+    type: object
+  shortpress-server_internal_api.IncomeTransactionDetailResponse:
+    properties:
+      amount:
+        type: integer
+      createdAt:
+        type: integer
+      currency:
+        type: string
+      email:
+        type: string
+      name:
+        type: string
+      paymentType:
+        type: integer
+      provider:
+        type: string
+      relatedId:
+        type: string
+      relatedType:
+        type: integer
+      status:
+        type: integer
+      transactionId:
+        type: string
+      userId:
+        type: string
+    type: object
+  shortpress-server_internal_api.IncomeTransactionHistoryResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/shortpress-server_internal_api.IncomeTransactionItem'
+        type: array
+      page:
+        type: integer
+      pageSize:
+        type: integer
+      total:
+        type: integer
+    type: object
+  shortpress-server_internal_api.IncomeTransactionItem:
+    properties:
+      amount:
+        type: integer
+      createdAt:
+        type: integer
+      description:
+        type: string
+      email:
+        type: string
+      name:
+        type: string
+      provider:
+        type: string
+      transactionId:
+        type: string
+    type: object
+  shortpress-server_internal_api.IncomeTransactionsRequest:
+    properties:
+      endTime:
+        description: Optional end timestamp
+        type: integer
+      page:
+        description: Optional page number
+        type: integer
+      pageSize:
+        description: Optional page size
+        type: integer
+      siteId:
+        type: string
+      startTime:
+        description: Optional start timestamp
+        type: integer
+      userEmail:
+        description: Optional user email for filtering
+        type: string
+    required:
+    - siteId
+    type: object
+  shortpress-server_internal_api.InternalAddCoinsRequest:
+    properties:
+      amount:
+        description: Actual money amount in cents
+        minimum: 0
+        type: integer
+      coinAmount:
+        description: Number of coins to add
+        minimum: 1
+        type: integer
+      currency:
+        description: Currency code, e.g. "USD"
+        type: string
+      description:
+        description: Transaction description
+        type: string
+      provider:
+        description: Payment provider name
+        type: string
+      transactionId:
+        description: External transaction ID
+        type: string
+    required:
+    - amount
+    - coinAmount
+    type: object
+  shortpress-server_internal_api.InternalAddCoinsResponse:
+    properties:
+      balance:
+        description: New balance after adding coins
+        type: integer
+      message:
+        type: string
+      success:
+        type: boolean
+      transactionId:
+        description: Internal transaction ID
+        type: string
+    type: object
+  shortpress-server_internal_api.InternalDeductCoinsRequest:
+    properties:
+      coinAmount:
+        description: Number of coins to deduct
+        minimum: 1
+        type: integer
+      description:
+        description: Transaction description
+        type: string
+      relatedId:
+        description: ID of related content (e.g., video ID)
+        type: string
+      source:
+        description: Transaction source, e.g., "plugin_deduct"
+        type: string
+    required:
+    - coinAmount
+    type: object
+  shortpress-server_internal_api.InternalDeductCoinsResponse:
+    properties:
+      balance:
+        description: New balance after deducting coins
+        type: integer
+      message:
+        type: string
+      success:
+        type: boolean
+      transactionId:
+        description: Internal transaction ID
+        type: string
+    type: object
+  shortpress-server_internal_api.InternalGetBalanceResponse:
+    properties:
+      balance:
+        description: Current coin balance
+        example: 1500
+        type: integer
+    type: object
+  shortpress-server_internal_api.InternalGetVideoConfigResponse:
+    properties:
+      config:
+        description: Config JSON data
+        items:
+          type: integer
+        type: array
+      vid:
+        description: Video ID
+        example: video-123
+        type: string
+    type: object
+  shortpress-server_internal_api.NewReleasePlaylistItem:
+    properties:
+      cover:
+        description: Playlist cover
+        type: string
+      createdAt:
+        description: Creation time
+        type: integer
+      playlistId:
+        description: Playlist ID
+        type: string
+      slug:
+        description: Slug for SEO-friendly URL
+        type: string
+      title:
+        description: Playlist name
+        type: string
+    type: object
+  shortpress-server_internal_api.NewReleasePlaylistsResponse:
+    properties:
+      code:
+        type: integer
+      data:
+        items:
+          $ref: '#/definitions/shortpress-server_internal_api.NewReleasePlaylistItem'
+        type: array
+      info:
+        type: string
+    type: object
+  shortpress-server_internal_api.OrderCreateRequest:
+    properties:
+      cancelUrl:
+        description: URL to redirect if canceled
+        type: string
+      currency:
+        description: Optional override for currency
+        type: string
+      orderType:
+        allOf:
+        - $ref: '#/definitions/shortpress-server_internal_api.OrderType'
+        enum:
+        - coin
+        - sub
+      packageId:
+        description: ID of the coin package or subscription package
+        type: string
+      returnUrl:
+        description: URL to redirect after payment
+        type: string
+      siteId:
+        type: string
+    required:
+    - orderType
+    - packageId
+    - siteId
+    type: object
+  shortpress-server_internal_api.OrderCreateResponse:
+    properties:
+      cancelUrl:
+        description: URL to redirect if payment is canceled
+        type: string
+      checkoutUrl:
+        description: URL for hosted checkout pages
+        type: string
+      clientSecret:
+        description: For Stripe payment intents
+        type: string
+      orderId:
+        type: string
+      paymentStatus:
+        type: string
+      successUrl:
+        description: URL to redirect after successful payment
+        type: string
+    type: object
+  shortpress-server_internal_api.OrderType:
+    enum:
+    - coin
+    - sub
+    type: string
+    x-enum-varnames:
+    - OrderTypeCoinPackage
+    - OrderTypeSubscription
+  shortpress-server_internal_api.PageTranslateItem:
+    properties:
+      context: {}
+      fieldType: {}
+      texts:
+        $ref: '#/definitions/shortpress-server_internal_api.PageTranslateTexts'
+    type: object
+  shortpress-server_internal_api.PageTranslateRequest:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/shortpress-server_internal_api.PageTranslateItem'
+        type: array
+    type: object
+  shortpress-server_internal_api.PageTranslateResponse:
+    properties:
+      context: {}
+      fieldType: {}
+      translations:
+        items:
+          $ref: '#/definitions/shortpress-server_internal_api.PageTranslations'
+        type: array
+    type: object
+  shortpress-server_internal_api.PageTranslateTexts:
+    properties:
+      description:
+        type: string
+      keywords:
+        type: string
+      name:
+        type: string
+      title:
+        type: string
+    type: object
+  shortpress-server_internal_api.PageTranslations:
+    properties:
+      description:
+        type: string
+      keywords:
+        type: string
+      lang:
+        type: string
+      name:
+        type: string
+      title:
+        type: string
+    type: object
+  shortpress-server_internal_api.PayPalConfigInfo:
+    properties:
+      clientId:
+        description: PayPal client ID
+        type: string
+    type: object
+  shortpress-server_internal_api.PaymentAccountInfo:
+    properties:
+      accountId:
+        description: 账户ID
+        example: "1234567890"
+        type: string
+      country:
+        description: 国家/地区
+        example: US
+        type: string
+      email:
+        description: 账号邮箱
+        example: johndoe@example.com
+        type: string
+    type: object
+  shortpress-server_internal_api.PaymentConfigInfoResponse:
+    properties:
+      paypal:
+        allOf:
+        - $ref: '#/definitions/shortpress-server_internal_api.PayPalConfigInfo'
+        description: PayPal configuration
+      stripe:
+        allOf:
+        - $ref: '#/definitions/shortpress-server_internal_api.StripeConfigInfo'
+        description: Stripe configuration
+    type: object
+  shortpress-server_internal_api.PaymentProviderConfig:
+    properties:
+      provider:
+        description: Payment provider name
+        example: stripe
+        type: string
+      siteId:
+        description: Site ID (internal use)
+        example: site-123
+        type: string
+      stripeConf:
+        allOf:
+        - $ref: '#/definitions/shortpress-server_internal_api.StripeConfig'
+        description: Stripe configuration
+    type: object
+  shortpress-server_internal_api.PaymentProviderInfo:
+    properties:
+      displayName:
+        description: Display name for the provider
+        type: string
+      enabled:
+        description: Whether the provider is enabled
+        type: boolean
+      provider:
+        description: Payment provider code (e.g., "stripe", "paypal")
+        type: string
+    type: object
+  shortpress-server_internal_api.PlaybackReportRequest:
+    properties:
+      cover:
+        description: Video cover image URL
+        type: string
+      duration:
+        description: Total video duration (seconds)
+        type: integer
+      episodeNumber:
+        description: Episode number of the video in the playlist
+        type: integer
+      playlistId:
+        description: Playlist ID
+        type: string
+      playlistTitle:
+        description: Playlist title
+        type: string
+      progress:
+        description: Playback progress (seconds)
+        type: integer
+      vid:
+        description: Video ID
+        type: string
+      videoTitle:
+        description: Video title
+        type: string
+    required:
+    - progress
+    - vid
+    type: object
+  shortpress-server_internal_api.PlaylistAccessChangeRequest:
+    properties:
+      accessType:
+        description: 1:free 2:paid 3:member-only
+        maximum: 3
+        minimum: 1
+        type: integer
+      freeVideos:
+        description: Number of free videos before requiring payment
+        type: integer
+      playlistId:
+        type: string
+      singleVideoPrice:
+        description: Cost in coins to unlock a single video
+        minimum: 0
+        type: integer
+    required:
+    - accessType
+    - playlistId
+    type: object
+  shortpress-server_internal_api.PlaylistAddVideosRequest:
+    properties:
+      playlistId:
+        description: Playlist ID
+        example: playlist-123
+        type: string
+      vids:
+        description: List of video IDs to add
+        example:
+        - '["vid-1"'
+        - '"vid-2"]'
+        items:
+          type: string
+        type: array
+    required:
+    - playlistId
+    - vids
+    type: object
+  shortpress-server_internal_api.PlaylistDelVideosRequest:
+    properties:
+      playlistId:
+        description: Playlist ID
+        example: playlist-123
+        type: string
+      vids:
+        description: List of video IDs to remove
+        example:
+        - '["vid-1"'
+        - '"vid-2"]'
+        items:
+          type: string
+        type: array
+    required:
+    - playlistId
+    - vids
+    type: object
+  shortpress-server_internal_api.PlaylistDeleteRequest:
+    properties:
+      playlistIds:
+        description: "SiteID\t string   `json:\"siteId\" binding:\"required\" example:\"site-123\"`
+          // Site ID"
+        example:
+        - '["playlist-123"'
+        - '"playlist-456"]'
+        items:
+          type: string
+        type: array
+    required:
+    - playlistIds
+    type: object
+  shortpress-server_internal_api.PlaylistI18nItem:
+    properties:
+      description:
+        type: string
+      language:
+        type: string
+      playlistId:
+        type: string
+      seoDescription:
+        type: string
+      seoKeywords:
+        type: string
+      seoTitle:
+        type: string
+      tags:
+        type: string
+      title:
+        type: string
+    type: object
+  shortpress-server_internal_api.PlaylistI18nModifyRequest:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/shortpress-server_internal_api.PlaylistI18nItem'
+        type: array
+    required:
+    - data
+    type: object
+  shortpress-server_internal_api.PlaylistI18nResponse:
+    properties:
+      code:
+        type: integer
+      data:
+        items:
+          $ref: '#/definitions/shortpress-server_internal_api.PlaylistI18nItem'
+        type: array
+      info:
+        type: string
+    type: object
+  shortpress-server_internal_api.PlaylistInfo:
+    properties:
+      accessType:
+        description: Access type 1:free 2:paid
+        type: integer
+      cover:
+        type: string
+      createdAt:
+        description: Creation time
+        example: 1609459200
+        type: integer
+      description:
+        type: string
+      freeVideos:
+        description: Number of free videos before requiring payment
+        type: integer
+      playlistId:
+        type: string
+      seo:
+        $ref: '#/definitions/shortpress-server_internal_api.PlaylistSeo'
+      singleVideoPrice:
+        description: Cost in coins to unlock a single video
+        type: integer
+      slug:
+        description: Slug for SEO-friendly URL
+        type: string
+      status:
+        type: integer
+      tags:
+        type: string
+      title:
+        type: string
+      updatedAt:
+        description: Update time
+        example: 1609459200
+        type: integer
+      version:
+        description: Version number
+        type: integer
+      videoCount:
+        description: Number of videos
+        type: integer
+      videos:
+        description: Video list
+        items:
+          $ref: '#/definitions/shortpress-server_internal_api.VideoItem'
+        type: array
+    type: object
+  shortpress-server_internal_api.PlaylistList:
+    properties:
+      items:
+        description: Playlist list
+        items:
+          $ref: '#/definitions/shortpress-server_internal_api.PlaylistInfo'
+        type: array
+    type: object
+  shortpress-server_internal_api.PlaylistResponse:
+    properties:
+      code:
+        type: integer
+      data:
+        $ref: '#/definitions/shortpress-server_internal_api.PlaylistInfo'
+      info:
+        type: string
+    type: object
+  shortpress-server_internal_api.PlaylistSeo:
+    properties:
+      description:
+        type: string
+      keywords:
+        type: string
+      title:
+        type: string
+    type: object
+  shortpress-server_internal_api.PlaylistSlugItem:
+    properties:
+      cover:
+        type: string
+      playlistId:
+        description: 播放列表ID
+        type: string
+      slug:
+        description: 播放列表Slug
+        type: string
+      slugs:
+        items:
+          $ref: '#/definitions/shortpress-server_internal_api.SlugI18n'
+        type: array
+      title:
+        type: string
+      vids:
+        items:
+          type: string
+        type: array
+    type: object
+  shortpress-server_internal_api.PlaylistTranslateRequest:
+    properties:
+      playlistId:
+        type: string
+    required:
+    - playlistId
+    type: object
+  shortpress-server_internal_api.PlaylistTranslateResponse:
+    properties:
+      code:
+        type: integer
+      data:
+        items:
+          $ref: '#/definitions/shortpress-server_internal_api.PlaylistI18nItem'
+        type: array
+      info:
+        type: string
+    type: object
+  shortpress-server_internal_api.PlaylistVideosOrder:
+    properties:
+      playlistId:
+        description: Playlist ID
+        example: playlist-123
+        type: string
+      sortData:
+        allOf:
+        - $ref: '#/definitions/shortpress-server_internal_api.VideoSortData'
+        description: Video sorting data
+      version:
+        description: Version number
+        type: integer
+    required:
+    - playlistId
+    - sortData
+    type: object
+  shortpress-server_internal_api.PublishHistoryItem:
+    properties:
+      is_current:
+        example: true
+        type: boolean
+      published_at:
+        example: 1672531199
+        type: integer
+      published_by:
+        example: 550e8400-e29b-41d4-a716-446655440001
+        type: string
+      version_number:
+        example: 1
+        type: integer
+    type: object
+  shortpress-server_internal_api.PublishPagesBuilderDataRequest:
+    properties:
+      siteId:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+    required:
+    - siteId
+    type: object
+  shortpress-server_internal_api.PublishPagesBuilderDataResponse:
+    properties:
+      publishedAt:
+        example: 1672531199
+        type: integer
+      siteId:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      versionNumber:
+        example: 1
+        type: integer
+    type: object
+  shortpress-server_internal_api.RegisterCreatorRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      nickname:
+        example: shortpress
+        type: string
+      password:
+        example: secret
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  shortpress-server_internal_api.RegisterResponseData:
+    properties:
+      accessToken:
+        type: string
+      siteId:
+        type: string
+    type: object
+  shortpress-server_internal_api.ResetCreatorPwdRequest:
+    properties:
+      email:
+        description: email corresponds to the email field in MySQL table
+        example: user@example.com
+        type: string
+      newPassword:
+        description: newPassword is the new password
+        example: newSecret
+        type: string
+    required:
+    - email
+    - newPassword
+    type: object
+  shortpress-server_internal_api.Response:
+    properties:
+      code:
+        type: integer
+      data: {}
+      info:
+        type: string
+    type: object
+  shortpress-server_internal_api.SavePagesBuilderDataRequest:
+    properties:
+      siteData: {}
+      siteId:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+    required:
+    - siteData
+    - siteId
+    type: object
+  shortpress-server_internal_api.SavePagesBuilderDataResponse:
+    properties:
+      siteId:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      updatedAt:
+        example: 1672531199
+        type: integer
+      versionNumber:
+        example: 1
+        type: integer
+    type: object
+  shortpress-server_internal_api.SiteAddPlaylistsRequest:
+    properties:
+      playlistIds:
+        description: Playlist ID array
+        example:
+        - '["playlist-1"'
+        - '"playlist-2"]'
+        items:
+          type: string
+        type: array
+      siteId:
+        description: Site ID, CHAR(36)
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+    required:
+    - playlistIds
+    - siteId
+    type: object
+  shortpress-server_internal_api.SiteCreateResponse:
+    properties:
+      code:
+        type: integer
+      data:
+        type: string
+      info:
+        type: string
+    type: object
+  shortpress-server_internal_api.SiteDelPlaylistsRequest:
+    properties:
+      playlistIds:
+        example:
+        - '["playlist-1"'
+        - '"playlist-2"]'
+        items:
+          type: string
+        type: array
+      siteId:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+    required:
+    - playlistIds
+    - siteId
+    type: object
+  shortpress-server_internal_api.SiteGetResponse:
+    properties:
+      code:
+        type: integer
+      data:
+        $ref: '#/definitions/shortpress-server_internal_api.SiteInfo'
+      info:
+        type: string
+    type: object
+  shortpress-server_internal_api.SiteInfo:
+    properties:
+      domain:
+        example: example.com
+        type: string
+      facebookPixelId:
+        description: Facebook Pixel ID, optional
+        example: "1234567890"
+        type: string
+      googleAnalyticsId:
+        description: Google Analytics ID, optional
+        example: UA-123456789-1
+        type: string
+      logo:
+        example: http://example.com/logo_updated.png
+        type: string
+      name:
+        example: MySite Updated
+        type: string
+      officialDomain:
+        $ref: '#/definitions/shortpress-server_internal_types.OfficialDomain'
+      path:
+        description: Site path, VARCHAR(255), required
+        example: /home
+        type: string
+      redirect:
+        example: false
+        type: boolean
+      seo:
+        $ref: '#/definitions/shortpress-server_internal_api.SiteSeo'
+      seoMultiLang:
+        description: 多语言配置，JSON格式，不做处理，直接存储
+        items:
+          type: integer
+        type: array
+      siteId:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      siteMultiLang:
+        description: 多语言配置，JSON格式，不做处理，直接存储
+        items:
+          type: integer
+        type: array
+      status:
+        example: 1
+        type: integer
+      templateId:
+        example: tpl_01f3b2
+        type: string
+      templateName:
+        description: Template name
+        example: Modern Template
+        type: string
+      thinkingdataAppId:
+        description: Thinking Data App ID, optional
+        example: app-1234567890
+        type: string
+    type: object
+  shortpress-server_internal_api.SitePageConfigCreateRequest:
+    properties:
+      config:
+        description: Configuration data
+        items:
+          type: integer
+        type: array
+      type:
+        description: Page type
+        type: string
+    required:
+    - config
+    - type
+    type: object
+  shortpress-server_internal_api.SitePageConfigCreateResponse:
+    properties:
+      id:
+        description: Created config ID
+        type: integer
+    type: object
+  shortpress-server_internal_api.SitePageConfigItem:
+    properties:
+      config:
+        description: Configuration data
+        items:
+          type: integer
+        type: array
+      id:
+        description: Config ID
+        type: integer
+      siteId:
+        description: Site ID
+        type: string
+      type:
+        description: Page type
+        type: string
+    type: object
+  shortpress-server_internal_api.SitePageConfigListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/shortpress-server_internal_api.SitePageConfigItem'
+        type: array
+      total:
+        type: integer
+    type: object
+  shortpress-server_internal_api.SitePageConfigUpdateRequest:
+    properties:
+      config:
+        description: Configuration data
+        items:
+          type: integer
+        type: array
+      type:
+        description: Page type
+        type: string
+    required:
+    - config
+    - type
+    type: object
+  shortpress-server_internal_api.SitePageConfigUpdateResponse:
+    properties:
+      id:
+        description: Updated config ID
+        type: integer
+    type: object
+  shortpress-server_internal_api.SiteSeo:
+    properties:
+      description:
+        description: SEO description, TEXT, optional
+        example: This is my updated website
+        type: string
+      keywords:
+        description: SEO keywords, VARCHAR(1024), optional
+        example: site,example,updated
+        type: string
+      title:
+        description: SEO title, VARCHAR(1024), optional
+        example: Welcome to MySite Updated
+        type: string
+    type: object
+  shortpress-server_internal_api.SlugI18n:
+    properties:
+      lang:
+        type: string
+      slug:
+        type: string
+    type: object
+  shortpress-server_internal_api.StripeConfig:
+    properties:
+      pk:
+        description: Stripe public key
+        example: pk_test_...
+        type: string
+      sk:
+        description: Stripe secret key
+        example: sk_test_...
+        type: string
+    type: object
+  shortpress-server_internal_api.StripeConfigInfo:
+    properties:
+      email:
+        description: Account email
+        type: string
+      pk:
+        description: Stripe public key
+        type: string
+      sk:
+        description: Stripe secret key
+        type: string
+    type: object
+  shortpress-server_internal_api.SubscriptionCancelRequest:
+    properties:
+      cancelAtPeriodEnd:
+        description: If true, cancels at the end of the current period; if false,
+          cancels immediately //todo
+        type: boolean
+      subscriptionId:
+        description: ID of the subscription to cancel
+        type: string
+    required:
+    - subscriptionId
+    type: object
+  shortpress-server_internal_api.SubscriptionData:
+    properties:
+      createdAt:
+        description: 创建时间
+        type: integer
+      currency:
+        description: 货币单位
+        type: string
+      description:
+        description: 套餐描述
+        type: string
+      discountPercentage:
+        description: 折扣百分比
+        type: integer
+      interval:
+        description: 计费周期(weekly,monthly,yearly)
+        type: string
+      name:
+        description: 套餐名称
+        type: string
+      originalPrice:
+        description: 原价
+        type: integer
+      packageId:
+        description: 订阅套餐ID
+        type: string
+      price:
+        description: 价格
+        type: integer
+      siteId:
+        description: 站点ID
+        type: string
+      status:
+        description: 状态：1启用 2禁用
+        type: integer
+    type: object
+  shortpress-server_internal_api.TemplateItem:
+    properties:
+      cover:
+        example: https://cdn.example.com/covers/tpl_01.png
+        type: string
+      description:
+        example: Suitable for anime video sites
+        type: string
+      name:
+        example: Anime Template 1
+        type: string
+      templateId:
+        example: tpl_01f3b2
+        type: string
+      version:
+        example: 1
+        type: integer
+    type: object
+  shortpress-server_internal_api.TemplateListResponseData:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/shortpress-server_internal_api.TemplateItem'
+        type: array
+      page:
+        example: 1
+        type: integer
+      pageSize:
+        example: 10
+        type: integer
+      total:
+        example: 2
+        type: integer
+    type: object
+  shortpress-server_internal_api.UserChangeStatusRequest:
+    properties:
+      email:
+        description: |-
+          Email is the user's email address
+          Required: true
+          Format: email
+        type: string
+      siteId:
+        description: |-
+          SiteID is the unique identifier of the site
+          Required: true
+        type: string
+      status:
+        description: |-
+          Status is the new status to assign to the user
+          Required: true
+          Enum: 2 3 127
+          2: activate - User is active
+          3: forbidden - User is forbidden
+          127: delete - User is deleted
+        type: integer
+    required:
+    - email
+    - siteId
+    - status
+    type: object
+  shortpress-server_internal_api.UserCoinsResponse:
+    properties:
+      balance:
+        type: integer
+      totalEarned:
+        type: integer
+      totalRealMoneySpent:
+        type: integer
+      totalSpent:
+        type: integer
+    type: object
+  shortpress-server_internal_api.UserInfo:
+    properties:
+      createdAt:
+        example: 1609459200
+        type: integer
+      email:
+        example: user@example.com
+        type: string
+      lastLoginAt:
+        example: 1609459200
+        type: integer
+      nickname:
+        example: John Doe
+        type: string
+      premiumExpiresAt:
+        description: Unix timestamp
+        example: 1609459200
+        type: integer
+      premiumType:
+        description: '0: free, 1: premium'
+        example: 0
+        type: integer
+      status:
+        example: 1
+        type: integer
+      updatedAt:
+        example: 1609459200
+        type: integer
+      userId:
+        example: user-123456
+        type: string
+    type: object
+  shortpress-server_internal_api.UserListResponseData:
+    properties:
+      items:
+        description: User list
+        items:
+          $ref: '#/definitions/shortpress-server_internal_api.UserInfo'
+        type: array
+      page:
+        description: Current page number
+        example: 1
+        type: integer
+      pageSize:
+        description: Page size
+        example: 20
+        type: integer
+      total:
+        description: Total number of users
+        example: 100
+        type: integer
+    type: object
+  shortpress-server_internal_api.UserLoginByAuthRequest:
+    properties:
+      Code:
+        type: string
+      Credential:
+        type: string
+      SrcType:
+        type: string
+      Token:
+        type: string
+    type: object
+  shortpress-server_internal_api.UserLoginData:
+    properties:
+      accessToken:
+        type: string
+    type: object
+  shortpress-server_internal_api.UserLoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  shortpress-server_internal_api.UserLoginResponse:
+    properties:
+      code:
+        type: integer
+      data:
+        $ref: '#/definitions/shortpress-server_internal_api.UserLoginData'
+      info:
+        type: string
+    type: object
+  shortpress-server_internal_api.UserProfileData:
+    properties:
+      autoUnlock:
+        description: Whether auto-unlock is enabled
+        type: boolean
+      avatarUrl:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      loginType:
+        description: '0: email, 1: google, 2: facebook, 3: twitter, 4: tiktok'
+        type: integer
+      nickname:
+        type: string
+      premiumExpiresAt:
+        type: integer
+      premiumType:
+        description: '0: free, 1: premium ...'
+        type: integer
+      status:
+        type: integer
+    type: object
+  shortpress-server_internal_api.UserProfileModifyRequest:
+    properties:
+      autoUnlock:
+        description: Use pointer to allow optional field
+        type: boolean
+      nickname:
+        description: Use pointer to allow optional field
+        type: string
+    type: object
+  shortpress-server_internal_api.UserProfileResponse:
+    properties:
+      code:
+        type: integer
+      data:
+        $ref: '#/definitions/shortpress-server_internal_api.UserProfileData'
+      info:
+        type: string
+    type: object
+  shortpress-server_internal_api.UserRegisterRequest:
+    properties:
+      email:
+        type: string
+      nickname:
+        type: string
+      password:
+        minLength: 6
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  shortpress-server_internal_api.UserSubscriptionResponse:
+    properties:
+      cancelAtPeriodEnd:
+        type: boolean
+      createdAt:
+        type: integer
+      currency:
+        type: string
+      currentPeriodEnd:
+        type: integer
+      currentPeriodStart:
+        type: integer
+      interval:
+        type: string
+      packageDescription:
+        type: string
+      packageId:
+        type: string
+      packageName:
+        description: Package details
+        type: string
+      price:
+        type: integer
+      provider:
+        type: string
+      providerCustomerId:
+        type: string
+      providerSubscriptionId:
+        type: string
+      siteId:
+        type: string
+      status:
+        type: integer
+      subscriptionId:
+        type: string
+      userId:
+        type: string
+    type: object
+  shortpress-server_internal_api.VideoAddSourcesRequest:
+    properties:
+      sources:
+        description: Sources to add
+        items:
+          $ref: '#/definitions/shortpress-server_internal_api.VideoSourceCreateItem'
+        type: array
+      vid:
+        description: Target video id
+        type: string
+    required:
+    - sources
+    - vid
+    type: object
+  shortpress-server_internal_api.VideoAddSourcesResponse:
+    properties:
+      code:
+        type: integer
+      data:
+        properties:
+          vid:
+            type: string
+        type: object
+      info:
+        type: string
+    type: object
+  shortpress-server_internal_api.VideoDeleteRequest:
+    properties:
+      vids:
+        description: List of video IDs to delete
+        example:
+        - '["vid-123"'
+        - '"vid-456"]'
+        items:
+          type: string
+        type: array
+    required:
+    - vids
+    type: object
+  shortpress-server_internal_api.VideoHistoryItem:
+    properties:
+      cover:
+        description: 视频封面图URL
+        type: string
+      duration:
+        description: 视频总时长（秒）
+        type: integer
+      episodeNumber:
+        description: 视频在播放列表中的集数
+        type: integer
+      lastPlayedAt:
+        description: 最后播放时间
+        type: integer
+      playlistId:
+        description: 播放列表ID
+        type: string
+      playlistTitle:
+        description: 播放列表标题
+        type: string
+      progress:
+        description: 播放进度（秒）
+        type: integer
+      title:
+        description: 视频标题
+        type: string
+      vid:
+        description: 视频ID
+        type: string
+    type: object
+  shortpress-server_internal_api.VideoHistoryResponse:
+    properties:
+      items:
+        description: 播放记录列表
+        items:
+          $ref: '#/definitions/shortpress-server_internal_api.VideoHistoryItem'
+        type: array
+      page:
+        description: 当前页码
+        type: integer
+      pageSize:
+        description: 每页大小
+        type: integer
+      total:
+        description: 总记录数
+        type: integer
+    type: object
+  shortpress-server_internal_api.VideoInfo:
+    properties:
+      config:
+        description: Custom configuration (arbitrary JSON)
+        items:
+          type: integer
+        type: array
+      cover:
+        description: Video cover
+        example: http://example.com/cover.jpg
+        type: string
+      createdAt:
+        description: Creation time
+        example: 1609459200
+        type: integer
+      description:
+        description: Video description
+        example: This is an example video
+        type: string
+      duration:
+        description: Video duration (seconds)
+        example: 180
+        type: integer
+      seo:
+        allOf:
+        - $ref: '#/definitions/shortpress-server_internal_api.VideoSeo'
+        description: Video SEO information
+      sources:
+        description: 'New: multiple playback sources'
+        items:
+          $ref: '#/definitions/shortpress-server_internal_api.VideoSourceInfo'
+        type: array
+      status:
+        description: 'Video status: 1-Unpublished, 2-Published, 3-Offline, 127-Deleted'
+        example: 1
+        type: integer
+      subtitles:
+        allOf:
+        - $ref: '#/definitions/shortpress-server_internal_types.SubtitleTracks'
+        description: Optional subtitle tracks specific to this source
+      tags:
+        description: Video tags
+        example: example,tutorial
+        type: string
+      title:
+        description: Video title
+        example: Example video
+        type: string
+      updatedAt:
+        description: Update time
+        example: 1609459200
+        type: integer
+      vid:
+        description: Unique video identifier
+        example: vid-123456
+        type: string
+    type: object
+  shortpress-server_internal_api.VideoItem:
+    properties:
+      status:
+        description: Video status
+        type: integer
+      unlockStatus:
+        description: Unlock status 1 - unlocked, 2 - locked  0 - not applicable
+        type: integer
+      vid:
+        description: Video ID
+        type: string
+    type: object
+  shortpress-server_internal_api.VideoListResponseData:
+    properties:
+      items:
+        description: Video list
+        items:
+          $ref: '#/definitions/shortpress-server_internal_api.VideoInfo'
+        type: array
+      page:
+        description: Current page number
+        example: 1
+        type: integer
+      pageSize:
+        description: Items per page
+        example: 20
+        type: integer
+      total:
+        description: Total count
+        example: 100
+        type: integer
+    type: object
+  shortpress-server_internal_api.VideoReplaceData:
+    properties:
+      cover:
+        description: Video cover
+        type: string
+      vid:
+        description: Unique video identifier
+        type: string
+      videoSourceUrl:
+        description: Video source play URL
+        type: string
+    type: object
+  shortpress-server_internal_api.VideoReplaceResonse:
+    properties:
+      code:
+        type: integer
+      data:
+        $ref: '#/definitions/shortpress-server_internal_api.VideoReplaceData'
+      info:
+        type: string
+    type: object
+  shortpress-server_internal_api.VideoSeo:
+    properties:
+      Keywords:
+        description: Keywords
+        example: example,tutorial
+        type: string
+      description:
+        description: Video description
+        example: This is an example video
+        type: string
+      title:
+        description: Video title
+        example: Example video
+        type: string
+    type: object
+  shortpress-server_internal_api.VideoSortData:
+    properties:
+      vids:
+        description: List of video IDs
+        example:
+        - '["vid-1"'
+        - '"vid-2"]'
+        items:
+          type: string
+        type: array
+    required:
+    - vids
+    type: object
+  shortpress-server_internal_api.VideoSourceCreateItem:
+    properties:
+      priority:
+        description: Lower is preferred; default 0
+        example: 0
+        type: integer
+      provider:
+        description: Source provider (local,youtube,vimeo, ...)
+        example: anime
+        type: string
+      sourceType:
+        description: 1:local 2:http 3:Embed(iframe)
+        example: 3
+        type: integer
+      url:
+        description: Video URL or embed URL/identifier
+        example: https://example.com/frame/xxx/animeid
+        type: string
+    type: object
+  shortpress-server_internal_api.VideoSourceInfo:
+    properties:
+      duration:
+        description: Optional duration (seconds)
+        example: 180
+        type: integer
+      height:
+        description: Optional height
+        example: 1080
+        type: integer
+      priority:
+        description: Lower values are preferred
+        example: 1
+        type: integer
+      provider:
+        description: Source provider (local,youtube,vimeo, unknown)
+        example: local
+        type: string
+      sourceId:
+        description: Unique source identifier
+        example: source-123456
+        type: string
+      sourceType:
+        description: 1:local 2:http(s) 3:embed
+        example: 1
+        type: integer
+      uploadStatus:
+        description: Upload status for this source
+        example: 5
+        type: integer
+      url:
+        description: Playback URL or embed URL/ID; local paths will auto-prepend host
+        example: https://wwww.xxx.com/videolib/abc/vid.mp4
+        type: string
+      width:
+        description: Optional width
+        example: 1920
+        type: integer
+    type: object
+  shortpress-server_internal_api.VideoUnlockHistoryResponse:
+    properties:
+      items:
+        description: 解锁记录列表
+        items:
+          $ref: '#/definitions/shortpress-server_internal_api.VideoUnlockResponse'
+        type: array
+      page:
+        description: 当前页码
+        type: integer
+      pageSize:
+        description: 每页大小
+        type: integer
+      total:
+        description: 总记录数
+        type: integer
+    type: object
+  shortpress-server_internal_api.VideoUnlockResponse:
+    properties:
+      coinCost:
+        description: 消费的金币数量
+        type: integer
+      contentId:
+        description: 内容ID (视频或播放列表ID)
+        type: string
+      contentTitle:
+        description: 内容标题
+        type: string
+      contentType:
+        description: 内容类型 "video" or "playlist"
+        type: string
+      episodeNumber:
+        description: 集数（如果是视频）
+        type: integer
+      expiredAt:
+        description: 过期时间（如果有）
+        type: integer
+      playlistId:
+        description: 播放列表ID (当contentType为视频时)
+        type: string
+      playlistTitle:
+        description: 播放列表标题
+        type: string
+      transactionId:
+        description: 对应的交易ID
+        type: string
+      unlockedAt:
+        description: 解锁时间
+        type: integer
+    type: object
+  shortpress-server_internal_api.VideoUploadResponse:
+    properties:
+      code:
+        type: integer
+      data:
+        $ref: '#/definitions/shortpress-server_internal_api.VideoUploadResponseData'
+      info:
+        type: string
+    type: object
+  shortpress-server_internal_api.VideoUploadResponseData:
+    properties:
+      vids:
+        description: List of successfully uploaded video IDs
+        example:
+        - '["vid-123"'
+        - '"vid-456"]'
+        items:
+          type: string
+        type: array
+    type: object
+  shortpress-server_internal_plugins.ActionParams:
+    properties:
+      action:
+        type: string
+      params:
+        items:
+          type: integer
+        type: array
+    type: object
+  shortpress-server_internal_types.OfficialDomain:
+    properties:
+      subdomain:
+        type: string
+    type: object
+  shortpress-server_internal_types.SubtitleItem:
+    properties:
+      desc:
+        description: Description/language description
+        type: string
+      path:
+        description: Relative path to subtitle file
+        type: string
+    type: object
+  shortpress-server_internal_types.SubtitleTracks:
+    additionalProperties:
+      $ref: '#/definitions/shortpress-server_internal_types.SubtitleItem'
+    type: object
+host: localhost:8000
+info:
+  contact:
+    email: support@swagger.io
+    name: shortpress
+    url: http://www.swagger.io/support
+  description: This is shortpress server.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Shortpress Server API
+  version: "0.8"
+paths:
+  /api/ads/unit/conf:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve ad unit configuration for a specific location in a site
+      parameters:
+      - description: Site ID
+        in: header
+        name: X-Site-Id
+        required: true
+        type: string
+      - description: Ad location identifier
+        example: '"feed_top"'
+        in: query
+        name: location
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns ad unit configuration
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.AdUnitConf'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+        "404":
+          description: Ad unit not found
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+      summary: Get ad unit configuration
+      tags:
+      - ads
+  /api/ads/unit/create:
+    post:
+      consumes:
+      - application/json
+      description: Create a new advertising unit with specified configuration
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Ad unit creation parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.AdUnit'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns the created ad unit information
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+      security:
+      - Bearer: []
+      summary: Create a new advertising unit
+      tags:
+      - ads
+  /api/ads/unit/list:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of advertising units
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Site ID
+        example: '"site123"'
+        in: query
+        name: siteId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns a list of ad units
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.AdUnitListResponseData'
+      security:
+      - Bearer: []
+      summary: List advertising units
+      tags:
+      - ads
+  /api/ads/unit/modify:
+    post:
+      consumes:
+      - application/json
+      description: Modify an existing advertisement unit
+      parameters:
+      - description: Bearer creator token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Ad unit modification parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.AdUnit'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success response
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+      security:
+      - Bearer: []
+      summary: Modify an ad unit
+      tags:
+      - ads
+  /api/analytics/income/statistics:
+    post:
+      consumes:
+      - application/json
+      description: Statistics of site transaction income by day
+      parameters:
+      - description: Query parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.IncomeStatisticsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return income statistics data by day
+          schema:
+            allOf:
+            - $ref: '#/definitions/shortpress-server_internal_api.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/shortpress-server_internal_api.IncomeStatisticsResponse'
+              type: object
+      summary: Get site income statistics
+      tags:
+      - analytics
+  /api/analytics/income/transactions:
+    post:
+      consumes:
+      - application/json
+      description: Get site payment transaction records by time range
+      parameters:
+      - description: Query parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.IncomeTransactionsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return transaction records
+          schema:
+            allOf:
+            - $ref: '#/definitions/shortpress-server_internal_api.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/shortpress-server_internal_api.IncomeTransactionHistoryResponse'
+              type: object
+      summary: Get site payment transaction records
+      tags:
+      - analytics
+  /api/analytics/income/transactions/info:
+    get:
+      consumes:
+      - application/json
+      description: Get detailed information for a specific transaction ID
+      parameters:
+      - description: Transaction ID
+        example: '"trans-123456"'
+        in: query
+        name: transactionId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return transaction details
+          schema:
+            allOf:
+            - $ref: '#/definitions/shortpress-server_internal_api.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/shortpress-server_internal_api.IncomeTransactionDetailResponse'
+              type: object
+      summary: Get transaction record details
+      tags:
+      - analytics
+  /api/client/anonymous/register:
+    post:
+      consumes:
+      - application/json
+      description: Anonymous Registration
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return Success
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.RegisterResponseData'
+      summary: Anonymous Registration
+      tags:
+      - client-player
+  /api/client/feed:
+    get:
+      consumes:
+      - application/json
+      description: Paginate query user feed video data, supports page number and page
+        size parameters
+      parameters:
+      - description: Guest ID
+        example: xxxx-xxxxx-xxxxx
+        in: query
+        name: guestId
+        required: true
+        type: string
+      - description: Playlist ID, if not provided, random or other strategies will
+          be used
+        example: xxxx-xxxxx-xxxxx
+        in: query
+        name: playlistId
+        type: string
+      - description: Site Path
+        example: videopath
+        in: query
+        name: sitePath
+        required: true
+        type: string
+      - description: Page number, default is 1
+        example: 1
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - description: Page size, default is 10
+        example: 10
+        in: query
+        maximum: 50
+        minimum: 1
+        name: pageSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return Feed Video Data
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.IDListResponseData-string'
+      summary: User Feed Video Data
+      tags:
+      - client-player
+  /api/client/payment/coins/package/list:
+    get:
+      consumes:
+      - application/json
+      description: Get all available coin packages for the specified site, for client
+        display
+      parameters:
+      - description: Site ID
+        in: header
+        name: X-Site-Id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return available coin package list
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.CoinPackageResponseData'
+      summary: Get client-side coin package list
+      tags:
+      - client-payment
+  /api/client/payment/coins/videos/buy:
+    post:
+      consumes:
+      - application/json
+      description: Use user's coin account balance to purchase video or playlist viewing
+        rights
+      parameters:
+      - description: Site ID
+        in: header
+        name: X-Site-Id
+        required: true
+        type: string
+      - description: Video purchase request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.BuyContentWithCoinsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return purchase result
+          schema:
+            allOf:
+            - $ref: '#/definitions/shortpress-server_internal_api.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/shortpress-server_internal_api.BuyContentWithCoinsResponse'
+              type: object
+      summary: Purchase video with coins
+      tags:
+      - client-payment
+  /api/client/payment/order/create:
+    post:
+      consumes:
+      - application/json
+      description: Create a payment order for purchasing a coin package or subscription,
+        return payment URLs
+      parameters:
+      - description: Order creation request
+        in: body
+        name: req
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.OrderCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return order information and payment URLs
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.OrderCreateResponse'
+      summary: Create payment order
+      tags:
+      - client-payment
+  /api/client/payment/provider/list:
+    get:
+      consumes:
+      - application/json
+      description: Get the list of payment service providers supported by the current
+        site
+      parameters:
+      - description: Site ID
+        in: header
+        name: X-Site-Id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return payment service provider list
+          schema:
+            items:
+              $ref: '#/definitions/shortpress-server_internal_api.PaymentProviderInfo'
+            type: array
+      summary: Get payment method list
+      tags:
+      - client-payment
+  /api/client/payment/subscription/cancel:
+    post:
+      consumes:
+      - application/json
+      description: Cancel a subscription for the current user
+      parameters:
+      - description: Site ID
+        in: header
+        name: X-Site-Id
+        required: true
+        type: string
+      - description: Cancel subscription request
+        in: body
+        name: req
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.SubscriptionCancelRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return success response
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+      summary: Cancel user subscription
+      tags:
+      - client-payment
+  /api/client/payment/subscription/create:
+    post:
+      consumes:
+      - application/json
+      description: Create a subscription order for the current user
+      parameters:
+      - description: Site ID
+        in: header
+        name: X-Site-Id
+        required: true
+        type: string
+      - description: Order request containing subscription package ID
+        in: body
+        name: req
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.OrderCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return subscription order information and checkout URL
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.OrderCreateResponse'
+      summary: Create subscription order
+      tags:
+      - client-payment
+  /api/client/payment/subscription/package/list:
+    get:
+      consumes:
+      - application/json
+      description: Get all available subscription packages for the specified site,
+        for client display
+      parameters:
+      - description: Site ID
+        in: header
+        name: X-Site-Id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return available subscription package list
+          schema:
+            items:
+              $ref: '#/definitions/shortpress-server_internal_api.SubscriptionData'
+            type: array
+      summary: Get client-side subscription package list
+      tags:
+      - client-payment
+  /api/client/payment/subscription/user/list:
+    get:
+      consumes:
+      - application/json
+      description: Get all subscription information for the current user
+      parameters:
+      - description: Site ID
+        in: header
+        name: X-Site-Id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return user subscription information
+          schema:
+            items:
+              $ref: '#/definitions/shortpress-server_internal_api.UserSubscriptionResponse'
+            type: array
+      summary: Get user subscriptions
+      tags:
+      - client-payment
+  /api/client/payment/user/coins/balance:
+    get:
+      consumes:
+      - application/json
+      description: Get current logged-in user's coin account balance at the specified
+        site
+      parameters:
+      - description: Site ID
+        in: header
+        name: X-Site-Id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return user coin account information
+          schema:
+            allOf:
+            - $ref: '#/definitions/shortpress-server_internal_api.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/shortpress-server_internal_api.UserCoinsResponse'
+              type: object
+      summary: Get user coin balance
+      tags:
+      - client-payment
+  /api/client/payment/user/coins/transactions:
+    get:
+      consumes:
+      - application/json
+      description: Get current logged-in user's coin transaction history records
+      parameters:
+      - description: Site ID
+        in: header
+        name: X-Site-Id
+        required: true
+        type: string
+      - description: Page number, default 1
+        example: 1
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - description: Items per page, default 20
+        example: 20
+        in: query
+        maximum: 100
+        minimum: 1
+        name: pageSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return transaction record list
+          schema:
+            allOf:
+            - $ref: '#/definitions/shortpress-server_internal_api.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/shortpress-server_internal_api.CoinTransactionHistoryResponse'
+              type: object
+      summary: Get user coin transaction records
+      tags:
+      - client-payment
+  /api/client/payment/user/coins/videos/transactions:
+    get:
+      consumes:
+      - application/json
+      description: Get current logged-in user's video and playlist unlock history
+        records
+      parameters:
+      - description: Site ID
+        in: header
+        name: X-Site-Id
+        required: true
+        type: string
+      - description: Page number, default 1
+        example: 1
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - description: Items per page, default 20
+        example: 20
+        in: query
+        maximum: 100
+        minimum: 1
+        name: pageSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return unlock record list
+          schema:
+            allOf:
+            - $ref: '#/definitions/shortpress-server_internal_api.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/shortpress-server_internal_api.VideoUnlockHistoryResponse'
+              type: object
+      summary: Get user video unlock records
+      tags:
+      - client-payment
+  /api/client/player/playlist/videos:
+    get:
+      consumes:
+      - application/json
+      description: Get Ordered Video List Under Playlist
+      parameters:
+      - description: Playlist ID
+        example: playlist-123456
+        in: path
+        name: playlistId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return Ordered Video List Under Playlist
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.IDListResponseData-shortpress-server_internal_api_VideoItem'
+      summary: Get Ordered Video List Under Playlist
+      tags:
+      - client-player
+  /api/client/playlist/batch-get:
+    get:
+      consumes:
+      - application/json
+      description: Batch get playlist details by IDs
+      parameters:
+      - description: Playlist IDs separated by commas
+        example: '"playlist-123456,playlist-123457"'
+        in: query
+        name: playlistIds
+        required: true
+        type: string
+      - description: Whether to get video list
+        example: false
+        in: query
+        name: needVid
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return Batch Playlist Details
+          schema:
+            allOf:
+            - $ref: '#/definitions/shortpress-server_internal_api.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/shortpress-server_internal_api.PlaylistInfo'
+                  type: array
+              type: object
+      summary: Batch Get Playlist Details
+      tags:
+      - client-player
+  /api/client/playlist/info:
+    get:
+      consumes:
+      - application/json
+      description: Get Playlist Details
+      parameters:
+      - description: Playlist ID
+        example: playlist-123456
+        in: query
+        name: playlistId
+        required: true
+        type: string
+      - description: Whether to get video list
+        example: true
+        in: query
+        name: needVid
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return Playlist Details
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.PlaylistResponse'
+      summary: Get Playlist Details
+      tags:
+      - client-player
+  /api/client/playlist/related:
+    get:
+      consumes:
+      - application/json
+      description: Get related playlists based on a given playlist ID
+      parameters:
+      - description: Site ID
+        in: header
+        name: X-Site-Id
+        required: true
+        type: string
+      - description: Playlist ID
+        example: '"playlist-123456"'
+        in: query
+        name: playlistID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns related playlists
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.IDListResponseData-string'
+      summary: Get Related Playlists
+      tags:
+      - client-player
+  /api/client/playlist/search:
+    get:
+      consumes:
+      - application/json
+      description: Search videos by keyword for a given site, with pagination and
+        sorting
+      parameters:
+      - description: Site ID
+        in: header
+        name: X-Site-Id
+        required: true
+        type: string
+      - description: Search keyword
+        example: '"tutorial"'
+        in: query
+        name: keyword
+        required: true
+        type: string
+      - description: Page number, default 1
+        example: 1
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - description: Items per page, default 10
+        example: 10
+        in: query
+        maximum: 50
+        minimum: 1
+        name: pageSize
+        type: integer
+      - description: Sort type (0:created time desc 1:name sort)
+        example: 0
+        in: query
+        name: sortType
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns video list in playlist
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.IDListResponseData-string'
+      summary: Search videos on the client side
+      tags:
+      - client-player
+  /api/client/site/info:
+    get:
+      consumes:
+      - application/json
+      description: Get Site Information
+      parameters:
+      - description: Site Path
+        example: sitepath
+        in: query
+        name: sitePath
+        required: true
+        type: string
+      - description: Site Domain
+        example: https://example.com
+        in: query
+        name: host
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return Site Information
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.SiteInfo'
+      summary: Get Site Information
+      tags:
+      - client-player
+  /api/client/site/new-release:
+    get:
+      consumes:
+      - application/json
+      description: Get the latest published playlists for a site, returns playlist
+        ID, name, cover, and creation time
+      parameters:
+      - description: Site ID
+        in: header
+        name: X-Site-Id
+        required: true
+        type: string
+      - description: Site ID
+        example: '"site-123"'
+        in: query
+        name: siteId
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns new release playlists
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.NewReleasePlaylistsResponse'
+      summary: Get New Release Playlists
+      tags:
+      - client-player
+  /api/client/site/pages:
+    get:
+      consumes:
+      - application/json
+      description: Get the current published site pages data from site_current_published
+        table for public consumption
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns published site pages data with version and published
+            timestamp
+          schema:
+            allOf:
+            - $ref: '#/definitions/shortpress-server_internal_api.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/shortpress-server_internal_api.GetSitePagesResponse'
+              type: object
+      summary: Get Published Site Pages
+      tags:
+      - client-player
+  /api/client/site/playlists:
+    get:
+      consumes:
+      - application/json
+      description: Get all published playlist IDs for the specified site with pagination
+        support
+      parameters:
+      - description: Site ID
+        in: header
+        name: X-Site-Id
+        required: true
+        type: string
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - description: 'Page size (default: 20)'
+        in: query
+        name: pageSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns paginated playlist slug data with i18n support
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.IDListResponseData-shortpress-server_internal_api_PlaylistSlugItem'
+      summary: Get All Playlist IDs for a Site
+      tags:
+      - client-player
+  /api/client/upload:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload an image file without authentication (for client users)
+      parameters:
+      - description: Image file to upload
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns the path of the successfully uploaded image
+          schema:
+            allOf:
+            - $ref: '#/definitions/shortpress-server_internal_api.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+      summary: Upload file without authentication
+      tags:
+      - client-player
+  /api/client/video/history:
+    get:
+      consumes:
+      - application/json
+      description: Returns the video viewing history for the authenticated user
+      parameters:
+      - description: Site ID
+        in: header
+        name: X-Site-Id
+        required: true
+        type: string
+      - description: Page number, default 1
+        example: 1
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - description: Items per page, default 10
+        example: 10
+        in: query
+        maximum: 50
+        minimum: 1
+        name: pageSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns user's viewing history
+          schema:
+            allOf:
+            - $ref: '#/definitions/shortpress-server_internal_api.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/shortpress-server_internal_api.VideoHistoryResponse'
+              type: object
+      summary: Get user's video viewing history
+      tags:
+      - client-player
+  /api/client/video/playback/records:
+    post:
+      consumes:
+      - application/json
+      description: Report user video playback progress and related information
+      parameters:
+      - description: Site ID
+        in: header
+        name: X-Site-Id
+        required: true
+        type: string
+      - description: Playback record information
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.PlaybackReportRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return report result
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+      summary: Report Video Playback Record
+      tags:
+      - client-player
+  /api/creator/complete-guides:
+    post:
+      consumes:
+      - application/json
+      description: Complete guides
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Creator login parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.CompleteGuidesRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns successful result of completing guides
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+      security:
+      - Bearer: []
+      summary: Complete guides
+      tags:
+      - creator
+  /api/creator/login:
+    post:
+      consumes:
+      - application/json
+      description: Creator login interface
+      parameters:
+      - description: Creator login parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.CreatorLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns login response containing accessToken
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+      summary: Creator login
+      tags:
+      - creator
+  /api/creator/profile:
+    get:
+      consumes:
+      - application/json
+      description: Get detailed creator profile information based on creator ID, including
+        nickname, avatar URL, creation time, etc.
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns creator profile information
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.CreatorProfileResponse'
+      security:
+      - Bearer: []
+      summary: Get creator's profile information
+      tags:
+      - creator
+  /api/creator/register:
+    post:
+      consumes:
+      - application/json
+      description: Currently only supports email registration
+      parameters:
+      - description: params
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.RegisterCreatorRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+      summary: Register a creator
+      tags:
+      - creator
+  /api/creator/resetpwd:
+    post:
+      consumes:
+      - application/json
+      description: Reset creator password via email.
+      parameters:
+      - description: Reset password parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.ResetCreatorPwdRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+      summary: Reset creator password
+      tags:
+      - creator
+  /api/creator/stats:
+    get:
+      consumes:
+      - application/json
+      description: Get creator's total videos, playlists, and sites count
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns creator video statistics
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.CreatorStatsResponseData'
+      security:
+      - Bearer: []
+      summary: Get creator's total videos, playlists, and sites count
+      tags:
+      - creator
+  /api/creator/upload-file:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Creator image upload interface, supports jpg, png, gif and other
+        common image formats
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Image file to upload
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns the path of the successfully uploaded image
+          schema:
+            allOf:
+            - $ref: '#/definitions/shortpress-server_internal_api.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+      security:
+      - Bearer: []
+      summary: Upload image
+      tags:
+      - creator
+  /api/internal/coins/add:
+    post:
+      consumes:
+      - application/json
+      description: Internal service-to-service API for adding coins (treated as coin
+        package purchase). Records both coin changes and actual amount. userId and
+        siteId are obtained from middleware.
+      parameters:
+      - description: Add coins request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.InternalAddCoinsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Coins added successfully
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.InternalAddCoinsResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+      summary: 'Internal API: Add coins to user account'
+      tags:
+      - internal-coins
+  /api/internal/coins/balance:
+    get:
+      consumes:
+      - application/json
+      description: Internal service-to-service API for getting user coin balance before
+        deduction. userId and siteId are obtained from middleware.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User coin balance retrieved successfully
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.InternalGetBalanceResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+      summary: 'Internal API: Get user coin balance'
+      tags:
+      - internal-coins
+  /api/internal/coins/deduct:
+    post:
+      consumes:
+      - application/json
+      description: Internal service-to-service API for deducting coins. Records coin
+        changes only. userId and siteId are obtained from middleware.
+      parameters:
+      - description: Deduct coins request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.InternalDeductCoinsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Coins deducted successfully
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.InternalDeductCoinsResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+        "409":
+          description: Insufficient coins
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+      summary: 'Internal API: Deduct coins from user account'
+      tags:
+      - internal-coins
+  /api/internal/video/config:
+    get:
+      consumes:
+      - application/json
+      description: Internal service-to-service API for getting video configuration.
+        No authentication required.
+      parameters:
+      - description: Video ID
+        in: query
+        name: vid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Config retrieved successfully
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.InternalGetVideoConfigResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+        "404":
+          description: Video not found
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+      summary: 'Internal API: Get video config'
+      tags:
+      - internal-video
+  /api/pages-builder/info:
+    get:
+      consumes:
+      - application/json
+      description: Get the complete site builder data including site_data and version
+        information from site_builder_data table
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Site ID
+        example: '"550e8400-e29b-41d4-a716-446655440000"'
+        in: query
+        name: siteId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns site builder data with version information
+          schema:
+            allOf:
+            - $ref: '#/definitions/shortpress-server_internal_api.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/shortpress-server_internal_api.GetPagesBuilderDataResponse'
+              type: object
+      security:
+      - Bearer: []
+      summary: Get pages builder data
+      tags:
+      - pages-builder
+  /api/pages-builder/publish:
+    post:
+      consumes:
+      - application/json
+      description: Publish the current site builder data from site_builder_data table
+        to site_current_published and site_published_history tables, making it live
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Publish request with site ID
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.PublishPagesBuilderDataRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns published data confirmation with version and timestamp
+          schema:
+            allOf:
+            - $ref: '#/definitions/shortpress-server_internal_api.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/shortpress-server_internal_api.PublishPagesBuilderDataResponse'
+              type: object
+      security:
+      - Bearer: []
+      summary: Publish pages builder data
+      tags:
+      - pages-builder
+  /api/pages-builder/publish/history:
+    get:
+      consumes:
+      - application/json
+      description: Get the publish history of a site from site_published_history table
+        with pagination and current version indication
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Site ID
+        example: '"550e8400-e29b-41d4-a716-446655440000"'
+        in: query
+        name: site_id
+        required: true
+        type: string
+      - description: Limit for pagination (max 100, default 10)
+        example: 10
+        in: query
+        name: limit
+        type: integer
+      - description: Offset for pagination (default 0)
+        example: 0
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns publish history with pagination and current version
+            indication
+          schema:
+            allOf:
+            - $ref: '#/definitions/shortpress-server_internal_api.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/shortpress-server_internal_api.GetPublishHistoryResponse'
+              type: object
+      security:
+      - Bearer: []
+      summary: Get publish history
+      tags:
+      - pages-builder
+  /api/pages-builder/save:
+    post:
+      consumes:
+      - application/json
+      description: Save complete site builder data including pages, sections, and
+        configuration to the draft state
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Pages builder data to save
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.SavePagesBuilderDataRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns successful result of saving pages builder data
+          schema:
+            allOf:
+            - $ref: '#/definitions/shortpress-server_internal_api.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/shortpress-server_internal_api.SavePagesBuilderDataResponse'
+              type: object
+      security:
+      - Bearer: []
+      summary: Save pages builder data
+      tags:
+      - pages-builder
+  /api/pages-builder/templates:
+    get:
+      consumes:
+      - application/json
+      description: List available page templates for site creation or customization
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Page size
+        in: query
+        name: pageSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns page templates list
+          schema:
+            allOf:
+            - $ref: '#/definitions/shortpress-server_internal_api.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/shortpress-server_internal_api.TemplateListResponseData'
+              type: object
+      security:
+      - Bearer: []
+      summary: Get page templates list
+      tags:
+      - pages-builder
+  /api/pages-builder/translate:
+    post:
+      consumes:
+      - application/json
+      description: Translate page content to different languages
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Translate request with site ID and site data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.PageTranslateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns translated page content
+          schema:
+            allOf:
+            - $ref: '#/definitions/shortpress-server_internal_api.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/shortpress-server_internal_api.PageTranslateResponse'
+              type: object
+      security:
+      - Bearer: []
+      summary: Translate pages
+      tags:
+      - pages-builder
+  /api/payment/account/info:
+    get:
+      consumes:
+      - application/json
+      description: Get the currently configured payment provider's account information
+      parameters:
+      - description: Site ID
+        in: query
+        name: siteId
+        required: true
+        type: string
+      - description: Payment provider (stripe)
+        in: query
+        name: provider
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return account information
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.PaymentAccountInfo'
+      summary: Get payment account information
+      tags:
+      - payment
+  /api/payment/coins/package:
+    post:
+      consumes:
+      - application/json
+      description: Modify existing coin package information
+      parameters:
+      - description: Coin package modification request
+        in: body
+        name: req
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.CoinPackageModifyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return successfully modified package ID
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.CoinPackageModifyResponse'
+      summary: Modify coin package
+      tags:
+      - payment
+  /api/payment/coins/package/create:
+    post:
+      consumes:
+      - application/json
+      description: Create a new coin package for users to purchase
+      parameters:
+      - description: Coin package creation request
+        in: body
+        name: req
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.CoinPackageCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return the successfully created package ID
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.CoinPackageCreateResponse'
+      summary: Create coin package
+      tags:
+      - payment
+  /api/payment/coins/package/list:
+    get:
+      consumes:
+      - application/json
+      description: Get all coin packages for the specified site
+      parameters:
+      - description: Site ID
+        in: query
+        name: siteId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return available coin package list
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.CoinPackageResponseData'
+      summary: Get coin package list
+      tags:
+      - payment
+  /api/payment/conf/info:
+    get:
+      consumes:
+      - application/json
+      description: Get site payment configuration information, including configured
+        payment providers and their public keys
+      parameters:
+      - description: Site ID
+        in: query
+        name: siteId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return configuration information
+          schema:
+            allOf:
+            - $ref: '#/definitions/shortpress-server_internal_api.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/shortpress-server_internal_api.PaymentConfigInfoResponse'
+              type: object
+      summary: Get payment configuration information
+      tags:
+      - payment
+  /api/payment/conf/save:
+    post:
+      consumes:
+      - application/json
+      description: Save user's payment provider configuration information, including
+        keys
+      parameters:
+      - description: Payment configuration information
+        in: body
+        name: config
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.PaymentProviderConfig'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return success information
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+      summary: Save payment configuration
+      tags:
+      - payment
+  /api/payment/conf/test:
+    post:
+      consumes:
+      - application/json
+      description: Verify the payment provider's key configuration is valid
+      parameters:
+      - description: Payment configuration information
+        in: body
+        name: config
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.PaymentProviderConfig'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return success information
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+      summary: Test payment configuration
+      tags:
+      - payment
+  /api/payment/customers/coins/balance:
+    get:
+      consumes:
+      - application/json
+      description: Get coin account information for a specific email user
+      parameters:
+      - description: User email
+        in: query
+        name: userEmail
+        required: true
+        type: string
+      - description: Site ID
+        in: query
+        name: siteId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return user coin account information
+          schema:
+            allOf:
+            - $ref: '#/definitions/shortpress-server_internal_api.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/shortpress-server_internal_api.UserCoinsResponse'
+              type: object
+      summary: Get coin information for a specific email user
+      tags:
+      - payment
+  /api/payment/customers/coins/grant:
+    post:
+      consumes:
+      - application/json
+      description: Allow creators to manually add coins to specific users as rewards
+        or compensation
+      parameters:
+      - description: Grant coins request
+        in: body
+        name: req
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.GrantCoinsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return operation result
+          schema:
+            allOf:
+            - $ref: '#/definitions/shortpress-server_internal_api.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/shortpress-server_internal_api.GrantCoinsResponse'
+              type: object
+      summary: Creator manually adds user coins
+      tags:
+      - payment
+  /api/payment/customers/coins/transactions:
+    get:
+      consumes:
+      - application/json
+      description: Administrators/creators query a specific user's coin transaction
+        history by email
+      parameters:
+      - description: Site ID
+        in: query
+        name: siteId
+        required: true
+        type: string
+      - description: User email
+        in: query
+        name: email
+        required: true
+        type: string
+      - description: Page number, default 1
+        example: 1
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - description: Items per page, default 20
+        example: 20
+        in: query
+        maximum: 100
+        minimum: 1
+        name: pageSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return transaction record list
+          schema:
+            allOf:
+            - $ref: '#/definitions/shortpress-server_internal_api.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/shortpress-server_internal_api.CoinTransactionHistoryResponse'
+              type: object
+      summary: Query specific user's coin transaction records
+      tags:
+      - payment
+  /api/payment/customers/coins/videos/transactions:
+    get:
+      consumes:
+      - application/json
+      description: Administrators/creators query a specific user's video and playlist
+        unlock history by email
+      parameters:
+      - description: Site ID
+        in: query
+        name: siteId
+        required: true
+        type: string
+      - description: User email
+        in: query
+        name: email
+        required: true
+        type: string
+      - description: Page number, default 1
+        example: 1
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - description: Items per page, default 20
+        example: 20
+        in: query
+        maximum: 100
+        minimum: 1
+        name: pageSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return unlock record list
+          schema:
+            allOf:
+            - $ref: '#/definitions/shortpress-server_internal_api.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/shortpress-server_internal_api.VideoUnlockHistoryResponse'
+              type: object
+      summary: Query specific user's video unlock records
+      tags:
+      - payment
+  /api/payment/subscription/create:
+    post:
+      consumes:
+      - application/json
+      description: Create a new subscription package for users to subscribe to
+      parameters:
+      - description: Subscription package creation request
+        in: body
+        name: req
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.SubscriptionData'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return the successfully created package ID
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.SubscriptionData'
+      summary: Create subscription package
+      tags:
+      - payment
+  /api/payment/subscription/get:
+    get:
+      consumes:
+      - application/json
+      description: Get detailed information of a specific subscription package
+      parameters:
+      - description: Site ID
+        in: query
+        name: siteId
+        required: true
+        type: string
+      - description: Package ID
+        in: query
+        name: packageId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return subscription package details
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.SubscriptionData'
+      summary: Get subscription package details
+      tags:
+      - payment
+  /api/payment/subscription/list:
+    get:
+      consumes:
+      - application/json
+      description: Get all subscription packages for the specified site
+      parameters:
+      - description: Site ID
+        in: query
+        name: siteId
+        required: true
+        type: string
+      - description: Filter by status (-1 for all, 1 for active, 2 for inactive)
+        in: query
+        name: status
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return subscription package list
+          schema:
+            items:
+              $ref: '#/definitions/shortpress-server_internal_api.SubscriptionData'
+            type: array
+      summary: Get subscription package list
+      tags:
+      - payment
+  /api/payment/subscription/modify:
+    post:
+      consumes:
+      - application/json
+      description: Modify existing subscription package information
+      parameters:
+      - description: Subscription package modification request
+        in: body
+        name: req
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.SubscriptionData'
+      - description: Subscription Package ID
+        in: query
+        name: packageId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return successfully modified package ID
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+      summary: Modify subscription package
+      tags:
+      - payment
+  /api/playlist/add-videos:
+    post:
+      consumes:
+      - application/json
+      description: Add multiple videos to the specified playlist
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Add videos parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.PlaylistAddVideosRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Addition successful
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+      security:
+      - Bearer: []
+      summary: Add videos to playlist
+      tags:
+      - playlist
+  /api/playlist/batch-get:
+    get:
+      consumes:
+      - application/json
+      description: Batch get detailed information of playlists, including basic information
+        and SEO information
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        type: string
+      - description: Playlist ID list
+        example: '"playlist-123456,playlist-123457"'
+        in: query
+        name: playlistIds
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return detailed playlist information
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.PlaylistList'
+      security:
+      - Bearer: []
+      summary: Batch get playlist information
+      tags:
+      - playlist
+  /api/playlist/change/access/type:
+    post:
+      consumes:
+      - application/json
+      description: Modify playlist access type (free, paid, member-exclusive) and
+        price settings
+      parameters:
+      - description: Access type and payment settings
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.PlaylistAccessChangeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Operation successful
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+      summary: Modify playlist access type and payment settings
+      tags:
+      - playlist
+  /api/playlist/create:
+    post:
+      consumes:
+      - application/json
+      description: Create a new playlist and its SEO information
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Create playlist parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.PlaylistInfo'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return created playlist information
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+      security:
+      - Bearer: []
+      summary: Create playlist
+      tags:
+      - playlist
+  /api/playlist/delete:
+    post:
+      consumes:
+      - application/json
+      description: Delete one or more playlists
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Delete playlist parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.PlaylistDeleteRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Deletion successful
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+      security:
+      - Bearer: []
+      summary: Delete playlist
+      tags:
+      - playlist
+  /api/playlist/get:
+    get:
+      consumes:
+      - application/json
+      description: Get detailed information of the specified playlist, including basic
+        information and SEO information
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Playlist ID
+        example: '"playlist-123456"'
+        in: query
+        name: playlistId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return detailed playlist information
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.PlaylistResponse'
+      security:
+      - Bearer: []
+      summary: Get playlist information
+      tags:
+      - playlist
+  /api/playlist/i18n:
+    get:
+      consumes:
+      - application/json
+      description: Get all i18n translation information for a specific playlist, including
+        translated title, description, tags, and SEO content in different languages
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Playlist ID
+        example: '"playlist-123456"'
+        in: query
+        name: playlistId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return detailed playlist i18n information
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.PlaylistI18nResponse'
+      security:
+      - Bearer: []
+      summary: Get playlist i18n information
+      tags:
+      - playlist
+  /api/playlist/i18n/batch-modify:
+    post:
+      consumes:
+      - application/json
+      description: Batch modify i18n information for multiple playlists, supports
+        creating or updating translations for fields like title, description, tags,
+        and SEO content
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Batch modify i18n parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.PlaylistI18nModifyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Modification successful
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+      security:
+      - Bearer: []
+      summary: Batch modify playlist i18n information
+      tags:
+      - playlist
+  /api/playlist/i18n/create:
+    post:
+      consumes:
+      - application/json
+      description: Translate playlist information (title, description, tags, SEO)
+        to multiple languages using AI translation service. Supports re-translation
+        to update existing translations.
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Translate playlist parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.PlaylistTranslateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return translation results
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.PlaylistTranslateResponse'
+      security:
+      - Bearer: []
+      summary: Translate playlist to multiple languages
+      tags:
+      - playlist
+  /api/playlist/list:
+    get:
+      consumes:
+      - application/json
+      description: Paginate query all playlist information under specified site
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Sort type (0:Create time descending 1:Name sorting)
+        example: 0
+        in: query
+        name: orderType
+        type: integer
+      - description: Playlist status, if not provided queries all
+        example: 1
+        in: query
+        name: status
+        type: integer
+      - description: Site ID, if not provided queries all sites
+        example: '"123e4567-e89b-12d3-a456-426614174000"'
+        in: query
+        name: siteId
+        type: string
+      - description: Page number, default 1
+        example: 1
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - description: Items per page, default 10
+        example: 10
+        in: query
+        maximum: 20
+        minimum: 1
+        name: pageSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return playlists information under site
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.IDListResponseData-string'
+      security:
+      - Bearer: []
+      summary: Query playlists under site
+      tags:
+      - playlist
+  /api/playlist/modify:
+    post:
+      consumes:
+      - application/json
+      description: Modify specific playlist information, including basic information
+        and SEO information
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Modify playlist parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.PlaylistInfo'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Modification successful
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+      security:
+      - Bearer: []
+      summary: Modify playlist information
+      tags:
+      - playlist
+  /api/playlist/remove-videos:
+    post:
+      consumes:
+      - application/json
+      description: Remove multiple videos from specified playlist
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Remove videos parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.PlaylistDelVideosRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Removal successful
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+      security:
+      - Bearer: []
+      summary: Remove videos from playlist
+      tags:
+      - playlist
+  /api/playlist/search:
+    get:
+      consumes:
+      - application/json
+      description: Search videos by keyword, supports pagination
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Sort type (0:Create time descending 1:Name sorting)
+        example: 1
+        in: query
+        name: orderType
+        type: integer
+      - description: Site ID, if not provided queries all sites
+        example: '"123e4567-e89b-12d3-a456-426614174000"'
+        in: query
+        name: siteId
+        type: string
+      - description: Exclude site ID, if set, query results will not include playlists
+          from this site, cannot be the same as siteID
+        example: '"123e4567-e89b-12d3-a456-426614174000"'
+        in: query
+        name: excludeSiteId
+        type: string
+      - description: Video playlist status
+        example: 1
+        in: query
+        name: status
+        type: integer
+      - description: Page number, default 1
+        example: 1
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - description: Items per page, default 10
+        example: 20
+        in: query
+        maximum: 20
+        minimum: 1
+        name: pageSize
+        type: integer
+      - description: Search keyword
+        example: playlist
+        in: query
+        name: keyword
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return search results
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.IDListResponseData-string'
+      security:
+      - Bearer: []
+      summary: Search playlists
+      tags:
+      - playlist
+  /api/playlist/videos:
+    get:
+      consumes:
+      - application/json
+      description: Get videos in the playlist with pagination, supports filtering
+        by status
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Playlist ID
+        example: '"playlist-123456"'
+        in: query
+        name: playlistId
+        required: true
+        type: string
+      - description: Video status, -1 for all
+        example: 1
+        in: query
+        name: status
+        type: integer
+      - description: Page number, default 1
+        example: 1
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - description: Items per page, default 20
+        example: 20
+        in: query
+        maximum: 100
+        minimum: 1
+        name: pageSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return video list IDs in playlist
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.IDListResponseData-string'
+      security:
+      - Bearer: []
+      summary: Get videos in playlist V2
+      tags:
+      - playlist
+  /api/playlist/videos/order:
+    get:
+      consumes:
+      - application/json
+      description: Get the order of videos in playlist
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Playlist ID
+        example: '"playlist-123456"'
+        in: query
+        name: playlistId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return video list IDs in playlist
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.PlaylistVideosOrder'
+      security:
+      - Bearer: []
+      summary: Get video order in playlist
+      tags:
+      - playlist
+  /api/playlist/videos/update-order:
+    post:
+      consumes:
+      - application/json
+      description: Order of videos in playlist
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Create playlist parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.PlaylistVideosOrder'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return created playlist information
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+      security:
+      - Bearer: []
+      summary: Video order in playlist
+      tags:
+      - playlist
+  /api/plugins/hook/active_call:
+    post:
+      consumes:
+      - application/json
+      description: 插件通过此接口主动调用指定的 action
+      parameters:
+      - description: User ID
+        in: header
+        name: X-User-ID
+        required: true
+        type: string
+      - description: Site ID
+        in: header
+        name: X-Site-Id
+        required: true
+        type: string
+      - description: Plugins ID
+        in: header
+        name: X-Plugins-Id
+        required: true
+        type: string
+      - description: 请求参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler.ActiveCallRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功返回 action 执行结果
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+      summary: 插件主动调用接口
+      tags:
+      - plugins
+  /api/plugins/install:
+    post:
+      consumes:
+      - application/json
+      description: 为当前站点安装指定插件
+      parameters:
+      - description: Site ID
+        in: header
+        name: X-Site-Id
+        required: true
+        type: string
+      - description: 安装插件请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler.InstallPluginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 安装成功，返回密钥
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+        "404":
+          description: 插件不存在
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+      summary: 安装插件到站点
+      tags:
+      - plugin-management
+  /api/plugins/installed/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取当前站点已安装的插件列表
+      parameters:
+      - description: Site ID
+        in: header
+        name: X-Site-Id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 获取成功
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+      summary: 获取站点已安装插件列表
+      tags:
+      - plugin-management
+  /api/plugins/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取所有已注册的插件列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 获取成功
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+      summary: 获取可用插件列表
+      tags:
+      - plugin-management
+  /api/plugins/register:
+    post:
+      consumes:
+      - application/json
+      description: 在系统中注册新插件
+      parameters:
+      - description: 注册插件请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler.RegisterPluginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 注册成功
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+      summary: 注册插件
+      tags:
+      - plugin-management
+  /api/plugins/uninstall:
+    post:
+      consumes:
+      - application/json
+      description: 从当前站点卸载指定插件
+      parameters:
+      - description: Site ID
+        in: header
+        name: X-Site-Id
+        required: true
+        type: string
+      - description: 卸载插件请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler.UninstallPluginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 卸载成功
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+        "404":
+          description: 插件未安装
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+      summary: 卸载站点插件
+      tags:
+      - plugin-management
+  /api/site/add-playlists:
+    post:
+      consumes:
+      - application/json
+      description: Add one or more video playlists to the target site.
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Add playlists parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.SiteAddPlaylistsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully added playlists response
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+      security:
+      - Bearer: []
+      summary: Add playlists to site
+      tags:
+      - site
+  /api/site/batch-get:
+    get:
+      consumes:
+      - application/json
+      description: Batch query brief site information by site ID
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        type: string
+      - description: List of site IDs, comma-separated
+        example: '"site-123456,site-123457"'
+        in: query
+        name: siteIds
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns a list of brief site information
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.VideoListResponseData'
+      security:
+      - Bearer: []
+      summary: Batch get site information
+      tags:
+      - site
+  /api/site/create:
+    post:
+      consumes:
+      - application/json
+      description: Create a site and its default SEO information. Optionally pass
+        templateId to initialize pages from a template and save into site_builder_data.
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Create site parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.SiteInfo'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully created site response
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.SiteCreateResponse'
+      security:
+      - Bearer: []
+      summary: Create site and default SEO information
+      tags:
+      - site
+  /api/site/get:
+    get:
+      consumes:
+      - application/json
+      description: Query basic site information and corresponding SEO information
+        by site ID
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Unique site ID
+        example: '"123e4567-e89b-12d3-a456-426614174000"'
+        in: query
+        name: siteId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns site and SEO information
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.SiteGetResponse'
+      security:
+      - Bearer: []
+      summary: Query site and SEO information
+      tags:
+      - site
+  /api/site/list:
+    get:
+      consumes:
+      - application/json
+      description: Paginate query for all site information owned by the current user,
+        including basic site information and status
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns site list data
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.IDListResponseData-string'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+      security:
+      - Bearer: []
+      summary: Get user's site list
+      tags:
+      - site
+  /api/site/modify:
+    post:
+      consumes:
+      - application/json
+      description: Modify site information and SEO configuration, siteId is a required
+        field.
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Modify site parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.SiteInfo'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns whether modification was successful
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+      security:
+      - Bearer: []
+      summary: Modify site and SEO information
+      tags:
+      - site
+  /api/site/page-config/create:
+    post:
+      consumes:
+      - application/json
+      description: Create a new site page config or update if exists with same site_id
+        and type
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Request body
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.SitePageConfigCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns config ID
+          schema:
+            allOf:
+            - $ref: '#/definitions/shortpress-server_internal_api.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/shortpress-server_internal_api.SitePageConfigCreateResponse'
+              type: object
+      security:
+      - Bearer: []
+      summary: Create a site page config
+      tags:
+      - site-page-config
+  /api/site/page-config/get:
+    get:
+      consumes:
+      - application/json
+      description: Get a site page config by type (siteId from X-Site-Id header)
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Site ID
+        in: header
+        name: X-Site-Id
+        required: true
+        type: string
+      - description: Page type
+        in: query
+        name: type
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns config
+          schema:
+            allOf:
+            - $ref: '#/definitions/shortpress-server_internal_api.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/shortpress-server_internal_api.SitePageConfigItem'
+              type: object
+      security:
+      - Bearer: []
+      summary: Get a site page config
+      tags:
+      - site-page-config
+  /api/site/page-config/list:
+    get:
+      consumes:
+      - application/json
+      description: List all site page configs for a site (siteId from X-Site-Id header)
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Site ID
+        in: header
+        name: X-Site-Id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns config list
+          schema:
+            allOf:
+            - $ref: '#/definitions/shortpress-server_internal_api.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/shortpress-server_internal_api.SitePageConfigListResponse'
+              type: object
+      security:
+      - Bearer: []
+      summary: List site page configs
+      tags:
+      - site-page-config
+  /api/site/page-config/update:
+    post:
+      consumes:
+      - application/json
+      description: Update an existing site page config by site_id and type
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Request body
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.SitePageConfigUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns config ID
+          schema:
+            allOf:
+            - $ref: '#/definitions/shortpress-server_internal_api.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/shortpress-server_internal_api.SitePageConfigUpdateResponse'
+              type: object
+      security:
+      - Bearer: []
+      summary: Update a site page config
+      tags:
+      - site-page-config
+  /api/site/path/valid:
+    get:
+      consumes:
+      - application/json
+      description: Check if a site path is valid and available for use
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Site path to validate
+        example: '"my-site"'
+        in: query
+        name: path
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Path is valid and available
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+      security:
+      - Bearer: []
+      summary: Validate site path availability
+      tags:
+      - site
+  /api/site/remove-playlists:
+    post:
+      consumes:
+      - application/json
+      description: Remove one or more video playlists from the target site.
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Remove playlists parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.SiteDelPlaylistsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully removed playlists response
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+      security:
+      - Bearer: []
+      summary: Remove playlists from site
+      tags:
+      - site
+  /api/site/user/change/status:
+    post:
+      consumes:
+      - application/json
+      description: Change a user's status (activate, forbidden, delete) within a site.
+        If deleted, the user is truly removed.
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Parameters for changing user status
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.UserChangeStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Status changed successfully
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+      security:
+      - Bearer: []
+      summary: Change user status
+      tags:
+      - site
+  /api/site/user/info:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve user information for a specific email within a site
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Site ID
+        example: '"site-123456"'
+        in: query
+        name: siteId
+        required: true
+        type: string
+      - description: User email
+        example: '"user@example.com"'
+        in: query
+        name: email
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns user information
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.UserInfo'
+      security:
+      - Bearer: []
+      summary: Get user information by email
+      tags:
+      - site
+  /api/site/user/list:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve users associated with a site with pagination, filtering,
+        and sorting
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Site ID
+        example: '"site-123456"'
+        in: query
+        name: siteId
+        required: true
+        type: string
+      - default: 1
+        description: Page number
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 20
+        description: Page size
+        in: query
+        maximum: 100
+        minimum: 1
+        name: pageSize
+        type: integer
+      - description: Search term for email or nickname
+        example: '"john"'
+        in: query
+        name: query
+        type: string
+      - default: 1
+        description: 'Sort type: 0=login time desc, 1=created time desc, 2=login time
+          asc, 3=created time asc'
+        in: query
+        name: sortType
+        type: integer
+      - default: -1
+        description: 'Status filter: -1=all, 1=inactive, 2=active, 3=disabled, 4=deleted'
+        in: query
+        name: status
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns list of users
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.UserListResponseData'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+      security:
+      - Bearer: []
+      summary: Get users for a specific site
+      tags:
+      - site
+  /api/user/login:
+    post:
+      consumes:
+      - application/json
+      description: User login with email and password
+      parameters:
+      - description: Site ID
+        in: header
+        name: X-Site-Id
+        required: true
+        type: string
+      - description: Login parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.UserLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns access token
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.UserLoginResponse'
+      summary: User login
+      tags:
+      - user
+  /api/user/login/oauth2:
+    post:
+      consumes:
+      - application/json
+      description: User login with oauth2
+      parameters:
+      - description: Site ID
+        in: header
+        name: X-Site-Id
+        required: true
+        type: string
+      - description: Login parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.UserLoginByAuthRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns access token
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.UserLoginResponse'
+      summary: User login with oauth2
+      tags:
+      - user
+  /api/user/profile:
+    get:
+      consumes:
+      - application/json
+      description: Get user profile information
+      parameters:
+      - description: Site ID
+        in: header
+        name: X-Site-Id
+        required: true
+        type: string
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns user profile
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.UserProfileResponse'
+      security:
+      - Bearer: []
+      summary: Get user profile
+      tags:
+      - user
+  /api/user/profile-modify:
+    post:
+      consumes:
+      - application/json
+      description: Modify user profile information (nickname and autoUnlock)
+      parameters:
+      - description: Site ID
+        in: header
+        name: X-Site-Id
+        required: true
+        type: string
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Profile modification parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.UserProfileModifyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns updated user profile
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.UserProfileResponse'
+      security:
+      - Bearer: []
+      summary: Modify user profile
+      tags:
+      - user
+  /api/user/register:
+    post:
+      consumes:
+      - application/json
+      description: Register a new user with email and password
+      parameters:
+      - description: Site ID
+        in: header
+        name: X-Site-Id
+        required: true
+        type: string
+      - description: Registration parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.UserRegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.RegisterResponseData'
+      summary: Register a new user
+      tags:
+      - user
+  /api/video/batch-get:
+    get:
+      consumes:
+      - application/json
+      description: Query brief video information by batch video IDs (note quantity
+        control...)
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        type: string
+      - description: Video ID list, comma separated
+        example: '"vid-123456,vid-123457"'
+        in: query
+        name: vids
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns brief video information list
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.VideoListResponseData'
+      security:
+      - Bearer: []
+      summary: Batch get brief video information
+      tags:
+      - video
+  /api/video/delete:
+    post:
+      consumes:
+      - application/json
+      description: Batch delete specified videos
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Video deletion parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.VideoDeleteRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Deletion successful
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+      security:
+      - Bearer: []
+      summary: Delete videos
+      tags:
+      - video
+  /api/video/get:
+    get:
+      consumes:
+      - application/json
+      description: Query video details by video ID
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Video ID
+        example: '"vid-123456"'
+        in: query
+        name: vid
+        required: true
+        type: string
+      - default: false
+        description: Whether SEO information is needed
+        in: query
+        name: need_seo
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns detailed video information
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.VideoInfo'
+      security:
+      - Bearer: []
+      summary: Get video details
+      tags:
+      - video
+  /api/video/list:
+    get:
+      consumes:
+      - application/json
+      description: Search videos by keyword, supports pagination
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Sort type (0:created time desc 1:name sort)
+        example: 1
+        in: query
+        name: sortType
+        type: integer
+      - description: Video status
+        example: 1
+        in: query
+        name: status
+        type: integer
+      - description: Video upload status, comma separated, supports multiple status
+          combinations
+        in: query
+        name: uploadStatus
+        type: integer
+      - description: Page number, default 1
+        example: 1
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - description: Page size, default 10
+        example: 20
+        in: query
+        maximum: 20
+        minimum: 1
+        name: pageSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns video list in playlist
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.IDListResponseData-string'
+      security:
+      - Bearer: []
+      summary: Display all videos of current creator
+      tags:
+      - video
+  /api/video/modify:
+    post:
+      consumes:
+      - application/json
+      description: Modify basic information of a specified video
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Video modification parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.VideoInfo'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Modification successful
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+      security:
+      - Bearer: []
+      summary: Modify video information
+      tags:
+      - video
+  /api/video/replace:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Synchronously replace a video
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Video ID to replace
+        example: '"vid-123456"'
+        in: query
+        name: vid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Replacement successful
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.VideoReplaceResonse'
+      security:
+      - Bearer: []
+      summary: Replace video, keeping the same video ID
+      tags:
+      - video
+  /api/video/search:
+    get:
+      consumes:
+      - application/json
+      description: Search videos by keyword, supports pagination
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Playlist ID, if not provided, search all videos
+        example: playlistid
+        in: query
+        name: playlistId
+        type: string
+      - description: Exclude playlist id, if not provided, search all videos
+        example: playlistid
+        in: query
+        name: excludePlaylistId
+        type: string
+      - description: Sort type (0:created time desc 1:name sort)
+        example: 1
+        in: query
+        name: orderType
+        type: integer
+      - description: Video status
+        example: 1
+        in: query
+        name: status
+        type: integer
+      - description: Video upload status, comma separated, supports multiple status
+          combinations
+        in: query
+        name: uploadStatus
+        type: integer
+      - description: Page number, default 1
+        example: 1
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - description: Page size, default 10
+        example: 20
+        in: query
+        maximum: 20
+        minimum: 1
+        name: pageSize
+        type: integer
+      - description: Search keyword
+        example: tutorial
+        in: query
+        name: keyword
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns search results
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.IDListResponseData-string'
+      security:
+      - Bearer: []
+      summary: Search videos
+      tags:
+      - video
+  /api/video/sources/add:
+    post:
+      consumes:
+      - application/json
+      description: Add one or multiple non-local sources for a video
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Add sources request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/shortpress-server_internal_api.VideoAddSourcesRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Added successfully
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.VideoAddSourcesResponse'
+      security:
+      - Bearer: []
+      summary: Add network sources for a video
+      tags:
+      - video
+  /api/video/upload:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Batch upload video files, returns a list of created video VIDs
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Playlist ID, if not provided, videos won't be added to any playlist
+        example: playlistid
+        in: formData
+        name: playlistId
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns a list of uploaded video VIDs
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.VideoUploadResponse'
+      security:
+      - Bearer: []
+      summary: Batch upload videos
+      tags:
+      - video
+  /api/video/upload-subtitle:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload video subtitle file, supports SRT and VTT formats
+      parameters:
+      - description: Bearer user token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Video ID
+        example: '"vid-123456"'
+        in: formData
+        name: vid
+        required: true
+        type: string
+      - description: Subtitle file, supports SRT and VTT formats
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns the subtitle URL
+          schema:
+            $ref: '#/definitions/shortpress-server_internal_api.Response'
+      security:
+      - Bearer: []
+      summary: Upload video subtitle
+      tags:
+      - video
+securityDefinitions:
+  Bearer:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

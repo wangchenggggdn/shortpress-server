@@ -1,0 +1,69 @@
+env: prod
+
+http:
+  host: 0.0.0.0
+  port: 8000
+
+security:
+  api_sign:
+    app_key: "123456"
+    app_security: "123456"
+  jwt:
+    key: "IgJd2x9Mae6cspfrIngu4NGuTOTEqo5k"
+
+data:
+  db:
+    shortpress:
+      driver: mysql
+      #"shortpress:tfFyuVzkzlW2UbbJ@tcp(rm-0xi0ek85xn653ss8d.mysql.rds.aliyuncs.com:3306)/shortpress?charset=utf8mb4&parseTime=true&loc=Local"
+      dsn: ${MYSQL_DSN} 
+  blacklist:
+    enabled: true
+    file_path: "config/blacklist.txt"
+
+domain:
+  hosting: ${DOMAIN_HOSTING} #"myshortpress.com"
+
+storage:
+  local:
+    image_host: ${IMAGE_HOST} #"https://images.shortpress.com/"
+    video_host: ${VIDEO_HOST} #"https://video.shortpress.com/"
+    path: ${STORAGE_PATH} #"/mnt/shortpress/"
+
+webhook:
+  stripe:
+    # Stripe webhook secret
+    url: ${STRIPE_WEB_HOOK} #"https://api.shortpress.com/api/payment/callback/stripe"
+    sucess_url: ${STRIPE_SUCCESS_URL} #"https://shortpress.com/payment/success"
+    cancel_url: ${STRIPE_CANCEL_URL} #"https://shortpress.com/payment/cancel
+  paypal:
+    url: ${PAYPAL_WEB_HOOK} #"https://api.shortpress.com/api/payment/callback/paypal"
+    sucess_url: ${PAYPAL_SUCCESS_URL} #"https://shortpress.com/payment/success"
+    cancel_url: ${PAYPAL_CANCEL_URL} #"https://shortpress.com/payment/cancel
+
+log:
+  log_level: info
+  encoding: json           # json or console
+  log_file_name: "./logs/server.log"
+  max_backups: 30
+  max_age: 7
+  max_size: 1024
+  compress: true
+
+translator:
+  lang: "zh-CN,zh-TW,en,ja,de,ko,fr,id"
+
+llm:
+  base_url: ${LLM_BASE_URL}
+  model: ${LLM_MODEL}
+  apikey: ${LLM_API_KEY}
+
+a2e:
+  generate_service_url: ${A2E_GENERATE_SERVICE_URL}
+  timeout: ${A2E_TIMEOUT}
+  retry_count: ${A2E_RETRY_COUNT}
+
+grok:
+  base_url: ${GROK_BASE_URL}
+  model: ${GROK_MODEL}
+  apikey: ${GROK_API_KEY}

@@ -1,0 +1,45 @@
+ARG REGISTRY=docker.io
+FROM ${REGISTRY}/golang:1.24-alpine AS builder
+RUN set -eux && sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories
+
+WORKDIR /app
+
+# First copy go.mod and go.sum to fully utilize Docker cache
+COPY go.mod go.sum ./
+RUN export GOPROXY=https://goproxy.cn,direct && go mod download
+
+# Then copy the remaining source code
+COPY . .
+
+RUN mkdir -p /app/bin/
+RUN export GOPROXY=https://goproxy.cn,direct && go build -o ./bin/shortpress-server ./cmd/server/main.go
+RUN mv config /app/bin/
+
+FROM ${REGISTRY}/alpine:3.16
+RUN set -eux && sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories
+
+RUN apk add tzdata && cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
+    && echo "Asia/Shanghai" > /etc/timezone \
+    && apk del tzdata \
+    && apk add ffmpeg
+
+ARG APP_ENV
+ENV APP_ENV=${APP_ENV}
+
+WORKDIR /app
+COPY --from=builder /app/bin /app
+
+# Add www-data user (if you need to run as a non-root user)
+# RUN addgroup -g 33 -S www-data && \
+#     adduser -u 33 -S -G www-data -H -s /sbin/nologin www-data && \
+#     chown -R www-data:www-data /app
+
+# If you need to run as www-data user, uncomment the line below
+# USER www-data
+
+EXPOSE 8000
+# Fix ENTRYPOINT format issue
+ENTRYPOINT ["./shortpress-server", "-conf", "config/prod.yml"]
+
+#docker build -t  1.1.1.1:5000/demo-api:v1 --build-arg APP_CONF=config/prod.yml --build-arg  APP_RELATIVE_PATH=./cmd/server/...  .
+#docker run -it --rm --entrypoint=ash 1.1.1.1:5000/demo-api:v1

@@ -1,0 +1,43 @@
+version: '3'
+
+services:
+  shortpress-server-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile-dev
+    restart: unless-stopped
+    ports:
+      - "8001:8000" # 映射到宿主机的8001端口
+    networks:
+      - wenuts-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.shortpress-dev-shortpress-server.rule=Host(`ac66.shortpress.com`)"
+      - "traefik.http.routers.shortpress-dev-shortpress-server.priority=1"
+      - "traefik.http.services.shortpress-dev-shortpress-server.loadbalancer.server.port=8000"
+    environment:
+      - APP_ENV=production
+    volumes:
+      - /mnt/shortpress:/mnt/shortpress
+    depends_on:
+      - mysql-dev
+  mysql-dev:
+    image: mysql:8.0
+    restart: unless-stopped
+    ports:
+      - "9918:3306" # 映射到宿主机的9918端口
+    networks:
+      - wenuts-network
+    environment:
+      MYSQL_ROOT_PASSWORD: test
+      MYSQL_DATABASE: shortpress # 创建的数据库名
+    volumes:
+      - mysql-data:/var/lib/mysql # 将数据持久化到命名卷
+    command: --default-authentication-plugin=mysql_native_password
+
+networks:
+  wenuts-network:
+    external: true
+
+volumes:
+  mysql-data: # 定义用于持久化数据库数据的命名卷
