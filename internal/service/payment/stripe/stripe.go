@@ -819,6 +819,7 @@ func (s *stripeService) CreateSubscriptionOrder(ctx *gin.Context, userID string,
 	s.client.SetAPIKey(config.StripeSecretKey)
 
 	// Check if the user already has an active subscription
+	/*
 	sub, err := s.userSubscriptionRepo.GetActiveByUserAndSite(ctx, userID, req.SiteID)
 	if err != nil {
 		return nil, err
@@ -834,6 +835,7 @@ func (s *stripeService) CreateSubscriptionOrder(ctx *gin.Context, userID string,
 			return nil, errors.New("user already has an active subscription")
 		}
 	}
+		*/
 
 	// Generate transaction ID
 	transactionID := uuid.New().String()

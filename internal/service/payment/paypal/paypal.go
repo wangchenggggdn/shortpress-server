@@ -960,6 +960,7 @@ func (s *paypalService) CreateSubscriptionOrder(ctx *gin.Context, userID string,
 	s.paypalClient.SetCredentials(config.PaypalClientID, config.PaypalClientSecret, config.IsSandbox)
 
 	// Check if the user already has an active subscription
+	/*
 	sub, err := s.userSubscriptionRepo.GetActiveByUserAndSite(ctx, userID, req.SiteID)
 	if err != nil {
 		return nil, err
@@ -975,6 +976,7 @@ func (s *paypalService) CreateSubscriptionOrder(ctx *gin.Context, userID string,
 			}
 		}
 	}
+	*/
 
 	// Generate transaction ID
 	transactionID := uuid.New().String()
