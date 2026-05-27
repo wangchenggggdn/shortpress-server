@@ -17,10 +17,11 @@ type UserRepository interface {
 	GetByEmailAndSiteID(ctx context.Context, email string, siteID string) (*model.User, error)
 	GetByIdentifierAndSiteID(ctx context.Context, identifier string, siteID string) (*model.User, error)
 	UpdateLoginTime(ctx context.Context, userID string) error
-	UpdatePremiumType(ctx context.Context, userID string, premiumType int, expiresAt *time.Time) error
+	UpdatePremiumType(ctx context.Context, userID string, premiumType int, expiresAt *time.Time, onetimeSub *int8) error
 	GetSiteUsers(ctx context.Context, query *model.UserQuery, page, pageSize, sortType int) ([]*model.UserInfoView, int64, error)
 	Delete(ctx context.Context, userID string) error
 	UpdateIdentifierAndEmail(ctx context.Context, user *model.User) error
+	UpdateMetaClickIds(ctx context.Context, userID, fbc, fbp, fbclid string) error
 }
 
 type userRepository struct {
@@ -47,6 +48,24 @@ func (r *userRepository) Update(ctx context.Context, user *model.User) error {
 // Update updates an existing user
 func (r *userRepository) UpdateIdentifierAndEmail(ctx context.Context, user *model.User) error {
 	return r.DB(ctx).Where("user_id = ?", user.UserID).Select("identifier", "email").Updates(user).Error
+}
+
+func (r *userRepository) UpdateMetaClickIds(ctx context.Context, userID, fbc, fbp, fbclid string) error {
+	now := time.Now()
+	updates := map[string]interface{}{
+		"meta_click_captured_at": now,
+		"updated_at":             now,
+	}
+	if fbc != "" {
+		updates["meta_fbc"] = fbc
+	}
+	if fbp != "" {
+		updates["meta_fbp"] = fbp
+	}
+	if fbclid != "" {
+		updates["meta_fbclid"] = fbclid
+	}
+	return r.DB(ctx).Model(&model.User{}).Where("user_id = ?", userID).Updates(updates).Error
 }
 
 // GetByUserID retrieves a user by user_id
@@ -177,12 +196,16 @@ func (r *userRepository) Delete(ctx context.Context, userID string) error {
 
 }
 
-// UpdatePremiumType updates the premium type for a user
-func (r *userRepository) UpdatePremiumType(ctx context.Context, userID string, premiumType int, expiresAt *time.Time) error {
+// UpdatePremiumType updates the premium type for a user. onetimeSub 非 nil 时同时更新 onetime_sub。
+func (r *userRepository) UpdatePremiumType(ctx context.Context, userID string, premiumType int, expiresAt *time.Time, onetimeSub *int8) error {
+	updates := map[string]interface{}{
+		"premium_type":       premiumType,
+		"premium_expires_at": expiresAt,
+	}
+	if onetimeSub != nil {
+		updates["onetime_sub"] = *onetimeSub
+	}
 	return r.DB(ctx).Model(&model.User{}).
 		Where("user_id = ?", userID).
-		Updates(map[string]interface{}{
-			"premium_type":       premiumType,
-			"premium_expires_at": expiresAt,
-		}).Error
+		Updates(updates).Error
 }

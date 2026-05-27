@@ -15,9 +15,14 @@ type User struct {
 	LastLoginAt      *time.Time `gorm:"column:last_login_at" json:"last_login_at"`
 	CreatedAt        time.Time  `gorm:"column:created_at;index:idx_created_at" json:"created_at"`
 	PremiumType      int8       `gorm:"column:premium_type;not null;default:0" json:"premium_type"`
+	OnetimeSub       int8       `gorm:"column:onetime_sub;not null;default:0" json:"onetime_sub"` // 1: 一次性订阅用户
 	PremiumExpiresAt *time.Time `gorm:"column:premium_expires_at" json:"premium_expires_at,omitempty"`
-	Referer          string     `gorm:"column:referer" json:"referer"`
-	UpdatedAt        time.Time  `gorm:"column:updated_at" json:"updated_at"`
+	Referer              string     `gorm:"column:referer" json:"referer"`
+	MetaFbc              string     `gorm:"column:meta_fbc" json:"metaFbc"`
+	MetaFbp              string     `gorm:"column:meta_fbp" json:"metaFbp"`
+	MetaFbclid           string     `gorm:"column:meta_fbclid" json:"metaFbclid"`
+	MetaClickCapturedAt  *time.Time `gorm:"column:meta_click_captured_at" json:"metaClickCapturedAt"`
+	UpdatedAt            time.Time  `gorm:"column:updated_at" json:"updated_at"`
 	Ver              string     `gorm:"column:ver" json:"ver"`
 }
 
@@ -60,6 +65,7 @@ type UserInfoView struct {
 	LastLoginAt      *time.Time `gorm:"column:last_login_at" json:"last_login_at"`
 	CreatedAt        time.Time  `gorm:"column:created_at;index:idx_created_at" json:"created_at"`
 	PremiumType      int8       `gorm:"column:premium_type;not null;default:0" json:"premium_type"`
+	OnetimeSub       int8       `gorm:"column:onetime_sub;not null;default:0" json:"onetime_sub"`
 	PremiumExpiresAt *time.Time `gorm:"column:premium_expires_at" json:"premium_expires_at,omitempty"`
 	UpdatedAt        time.Time  `gorm:"column:updated_at" json:"updated_at"`
 	Nickname         string     `gorm:"column:nickname" json:"nickname"` // 从 user_profiles 联表查询获取，不映射到数据库列

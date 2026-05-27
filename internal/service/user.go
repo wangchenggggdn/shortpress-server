@@ -13,6 +13,7 @@ import (
 	"shortpress-server/internal/repository/db/payment"
 	"shortpress-server/internal/repository/db/site"
 	"shortpress-server/internal/repository/db/user"
+	"shortpress-server/internal/service/analytics"
 	"shortpress-server/pkg/log"
 
 	"github.com/gin-gonic/gin"
@@ -27,6 +28,7 @@ type UserService interface {
 	LoginByOAuth2(ctx *gin.Context, req *api.UserLoginByAuthRequest, siteID string) (string, string, error)
 	GetUserProfile(ctx *gin.Context, userID string) (*api.UserProfileData, error)
 	ModifyUserProfile(ctx *gin.Context, userID string, req *api.UserProfileModifyRequest) error
+	SyncMetaClick(ctx *gin.Context, userID string, req *api.MetaClickSyncRequest) error
 }
 
 type userService struct {
@@ -271,6 +273,7 @@ func (s *userService) register(ctx *gin.Context, args *registerArgs) (string, er
 					"imageToVideoquality": 40,
 					"imageToVideopremium": 50,
 					"imageToVideopro":     60,
+					"imageToVideoultra":   100,
 					"textToImagepro":      15,
 					"textToImagepremium":  10,
 					"textToImagebasic":    5,
@@ -489,6 +492,7 @@ func (s *userService) GetUserProfile(ctx *gin.Context, userID string) (*api.User
 		Nickname:         profile.Nickname,
 		AvatarURL:        profile.AvatarURL,
 		PremiumType:      user.PremiumType,
+		OnetimeSub:       user.OnetimeSub,
 		AutoUnlock:       *profile.AutoUnlock,
 		PremiumExpiresAt: expAt,
 		Status:           user.Status,
@@ -532,4 +536,18 @@ func (s *userService) ModifyUserProfile(ctx *gin.Context, userID string, req *ap
 	}
 
 	return nil
+}
+
+// SyncMetaClick persists Meta fbc/fbp/fbclid on the user row for delayed conversions.
+func (s *userService) SyncMetaClick(ctx *gin.Context, userID string, req *api.MetaClickSyncRequest) error {
+	if req == nil {
+		return nil
+	}
+	payload := &api.MetaClickPayload{
+		Fbc:            req.Fbc,
+		Fbp:            req.Fbp,
+		Fbclid:         req.Fbclid,
+		EventSourceURL: req.EventSourceURL,
+	}
+	return analytics.PersistUserMetaClick(ctx, s.userRepository, userID, payload)
 }

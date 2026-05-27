@@ -70,7 +70,7 @@ type StripeConfigInfo struct {
 type PayPalConfigInfo struct {
 	ClientID     string `json:"clientId,omitempty"`     // PayPal client ID
 	ClientSecret string `json:"clientSecret,omitempty"` // PayPal client secret
-	IsSandbox    bool   `json:"isSandbox"`               // PayPal sandbox mode (always return)
+	IsSandbox    bool   `json:"isSandbox"`              // PayPal sandbox mode (always return)
 }
 
 // CoinPackageCreateRequest defines the request structure for creating a coin package
@@ -107,19 +107,19 @@ type CoinPackageModifyResponse struct {
 
 // SubscriptionPackageResponse defines the response structure for subscription package data
 type SubscriptionData struct {
-	PackageID          string      `json:"packageId"`                    // 订阅套餐ID
-	SiteID             string      `json:"siteId"`                       // 站点ID
-	Name               string      `json:"name"`                         // 套餐名称
-	Description        string      `json:"description"`                  // 套餐描述
-	Interval           string      `json:"interval"`                     // 计费周期(weekly,monthly,yearly)
-	Price              types.Money `json:"price"`                        // 价格
-	OriginalPrice      types.Money `json:"originalPrice,omitempty"`      // 原价
-	Currency           string      `json:"currency"`                     // 货币单位
-	DiscountPercentage int         `json:"discountPercentage,omitempty"` // 折扣百分比
-	Coins              int         `json:"coins"`                        // 赠送金币数量
+	PackageID          string          `json:"packageId"`                    // 订阅套餐ID
+	SiteID             string          `json:"siteId"`                       // 站点ID
+	Name               string          `json:"name"`                         // 套餐名称
+	Description        string          `json:"description"`                  // 套餐描述
+	Interval           string          `json:"interval"`                     // 计费周期(weekly,monthly,yearly)
+	Price              types.Money     `json:"price"`                        // 价格
+	OriginalPrice      types.Money     `json:"originalPrice,omitempty"`      // 原价
+	Currency           string          `json:"currency"`                     // 货币单位
+	DiscountPercentage int             `json:"discountPercentage,omitempty"` // 折扣百分比
+	Coins              int             `json:"coins"`                        // 赠送金币数量
 	Rights             json.RawMessage `json:"rights"`                       // 订阅权益
-	Status             int         `json:"status"`                       // 状态：1启用 2禁用
-	CreatedAt          int64       `json:"createdAt"`                    // 创建时间
+	Status             int             `json:"status"`                       // 状态：1启用 2禁用
+	CreatedAt          int64           `json:"createdAt"`                    // 创建时间
 }
 
 // // SubscriptionCreateRequest defines the request structure for creating a subscription package
@@ -227,15 +227,25 @@ const (
 	OrderTypeSubscription OrderType = "sub"
 )
 
+// MetaClickPayload carries Facebook click/browser ids for CAPI attribution.
+type MetaClickPayload struct {
+	Fbc            string `json:"fbc,omitempty"`
+	Fbp            string `json:"fbp,omitempty"`
+	Fbclid         string `json:"fbclid,omitempty"`
+	EventSourceURL string `json:"eventSourceUrl,omitempty"`
+}
+
 // OrderCreateRequest defines the request structure for creating an order
 type OrderCreateRequest struct {
-	SiteID       string    `json:"siteId" binding:"required"`
-	OrderType    OrderType `json:"orderType" binding:"required,oneof=coin sub"`
-	PackageID    string    `json:"packageId" binding:"required"` // ID of the coin package or subscription package
-	PaymentMethod string   `json:"paymentMethod" binding:"required,oneof=stripe paypal"` // Payment method: stripe or paypal
-	Currency     string    `json:"currency,omitempty"`           // Optional override for currency
-	ReturnURL    string    `json:"returnUrl,omitempty"`          // URL to redirect after payment
-	CancelURL    string    `json:"cancelUrl,omitempty"`          // URL to redirect if canceled
+	SiteID          string                 `json:"siteId" binding:"required"`
+	OrderType       OrderType              `json:"orderType" binding:"required,oneof=coin sub"`
+	PackageID       string                 `json:"packageId" binding:"required"`                         // ID of the coin package or subscription package
+	PaymentMethod   string                 `json:"paymentMethod" binding:"required,oneof=stripe paypal"` // Payment method: stripe or paypal
+	Currency        string                 `json:"currency,omitempty"`                                   // Optional override for currency
+	ReturnURL       string                 `json:"returnUrl,omitempty"`                                  // URL to redirect after payment
+	CancelURL       string                 `json:"cancelUrl,omitempty"`                                  // URL to redirect if canceled
+	TrackingContext map[string]interface{} `json:"trackingContext,omitempty"`                            // Attribution and frontend context for backend analytics
+	Meta            *MetaClickPayload      `json:"meta,omitempty"`
 }
 
 // OrderCreateResponse defines the response structure for creating an order
@@ -283,6 +293,11 @@ type UserSubscriptionResponse struct {
 	Interval           string      `json:"interval,omitempty"`
 	Price              types.Money `json:"price,omitempty"`
 	Currency           string      `json:"currency,omitempty"`
+}
+
+// SubscriptionConfirmRequest confirms a subscription order after Stripe checkout
+type SubscriptionConfirmRequest struct {
+	OrderID string `json:"orderId" binding:"required"` // payment_transactions.transaction_id
 }
 
 // SubscriptionCancelRequest represents the request for cancelling a subscription
@@ -339,8 +354,8 @@ type ClaimTaskRewardRequest struct {
 
 // ClaimTaskRewardResponse defines response for claiming task reward
 type ClaimTaskRewardResponse struct {
-	Success bool   `json:"success"`        // 是否成功领取（true=首次完成，false=已领取过）
-	Balance int    `json:"balance"`        // 当前金币余额
+	Success bool   `json:"success"`           // 是否成功领取（true=首次完成，false=已领取过）
+	Balance int    `json:"balance"`           // 当前金币余额
 	Message string `json:"message,omitempty"` // 提示信息
 }
 

@@ -28,7 +28,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-sql-driver/mysql"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 const (
@@ -45,6 +47,10 @@ type StripeService interface {
 	HandleWebhook(ctx *gin.Context) error
 	GetConfigInfo(ctx *gin.Context, siteID string) (*api.PaymentConfigInfoResponse, error)
 	CreateSubscriptionOrder(ctx *gin.Context, userID string, req api.OrderCreateRequest) (*api.OrderCreateResponse, error)
+	// ConfirmSubscriptionPayment 支付成功页/Webhook 未到时，按订单号向 Stripe 核验并发放会员
+	ConfirmSubscriptionPayment(ctx *gin.Context, userID, siteID, transactionID string) error
+	// FulfillOrderByTransactionID 无需登录，供支付成功回跳或 Webhook 补偿（核验 Stripe 已付款）
+	FulfillOrderByTransactionID(ctx *gin.Context, siteID, transactionID string) error
 	CancelSubscription(ctx context.Context, userID string, subscriptionID string, cancelAtPeriodEnd bool) error
 	GetUserPurchases(ctx context.Context, userID string, siteID string, page, pageSize int) ([]*api.PurchaseRecord, int64, error)
 }
@@ -409,6 +415,10 @@ func (s *stripeService) createCoinPackageOrder(
 		"original_price":      coinPackage.OriginalPrice,
 		"discount_percentage": coinPackage.DiscountPercentage,
 	}
+	if len(req.TrackingContext) > 0 {
+		snapshot["tracking_context"] = req.TrackingContext
+	}
+	snapshot = analytics.MergeMetaIntoSnapshot(snapshot, req.Meta)
 	tx := &model.PaymentTransaction{
 		TransactionID:     transactionID,
 		OrderID:           transactionID, // Normally requires an order table, currently the fund flow table temporarily replaces the Order table
@@ -482,10 +492,19 @@ func (s *stripeService) HandleWebhook(ctx *gin.Context) error {
 		return errors.New("stripe signature missing")
 	}
 
-	// Get site ID from query params
+	// siteId 优先来自 query；未带 query 时从 metadata 或 cs_ 对应本地订单反查
 	siteID := ctx.Query("siteId")
+	peekSiteID, peekSessionID := peekStripeWebhookPayload(payload)
 	if siteID == "" {
-		return errors.New("site ID missing")
+		siteID = peekSiteID
+	}
+	if siteID == "" && peekSessionID != "" {
+		if tx, _ := s.paymentTransactionRepo.GetByProviderPaymentID(ctx, "stripe", peekSessionID); tx != nil {
+			siteID = tx.SiteID
+		}
+	}
+	if siteID == "" {
+		return errors.New("site ID missing: webhook URL 需带 ?siteId= 或在 Checkout metadata 中设置 site_id")
 	}
 
 	// Get payment config for the site
@@ -516,6 +535,12 @@ func (s *stripeService) HandleWebhook(ctx *gin.Context) error {
 		return err
 	}
 
+	s.service.Logger().Info("Stripe webhook event",
+		zap.String("type", string(event.Type)),
+		zap.String("siteId", siteID),
+		zap.String("eventId", event.ID),
+	)
+
 	// Process the webhook based on event type
 
 	var processErr error
@@ -527,9 +552,11 @@ func (s *stripeService) HandleWebhook(ctx *gin.Context) error {
 	case "charge.refunded":
 		processErr = s.handleChargeRefunded(ctx, &event)
 	case "payment_intent.succeeded":
-		return nil
-		//processErr = s.handleCheckoutSessionCompleted(ctx, siteID, &event)
-	case "invoice.paid":
+		processErr = s.handlePaymentIntentSucceeded(ctx, siteID, &event)
+	case "checkout.session.async_payment_succeeded":
+		processErr = s.handleCheckoutSessionCompleted(ctx, siteID, &event)
+	case "invoice.paid", "invoice.payment_succeeded":
+		// 与 Stripe 文档一致：在线扣款成功时 paid 与 payment_succeeded 可能都会投递，业务幂等靠 invoice.id
 		processErr = s.handleInvoicePaid(ctx, siteID, &event)
 		// case  "customer.subscription.created":
 		// 	processErr = s.handleSubscriptionCreated(ctx, siteID, &event)
@@ -537,9 +564,8 @@ func (s *stripeService) HandleWebhook(ctx *gin.Context) error {
 		processErr = s.handleSubscriptionUpdated(ctx, siteID, &event)
 	case "customer.subscription.deleted":
 		processErr = s.handleSubscriptionDeleted(ctx, siteID, &event)
-	// charge.succeeded 事件不处理，因为 checkout.session.completed 已经处理了
 	case "charge.succeeded":
-		return nil
+		processErr = s.handleChargeSucceeded(ctx, siteID, &event)
 	default:
 		log.Error(ctx, "Unhandled event type: "+string(event.Type))
 	}
@@ -568,79 +594,156 @@ func (s *stripeService) HandleWebhook(ctx *gin.Context) error {
 
 // handleCheckoutSessionCompleted processes checkout.session.completed events
 func (s *stripeService) handleCheckoutSessionCompleted(ctx *gin.Context, siteID string, event *goStripe.Event) error {
-	// Parse the event data
 	var session goStripe.CheckoutSession
-	err := json.Unmarshal(event.Data.Raw, &session)
-	if err != nil {
+	if err := json.Unmarshal(event.Data.Raw, &session); err != nil {
 		return err
 	}
+	return s.fulfillCheckoutSessionCompleted(ctx, siteID, &session)
+}
 
-	transactionID := session.Metadata["transaction_id"]
+// ConfirmSubscriptionPayment 客户端支付成功回跳后调用，补偿 Webhook 未送达或未处理的情况
+func (s *stripeService) ConfirmSubscriptionPayment(ctx *gin.Context, userID, siteID, transactionID string) error {
 	if transactionID == "" {
-		return errors.New("missing transaction ID in metadata")
+		return errors.New("orderId is required")
 	}
 
 	transaction, err := s.paymentTransactionRepo.GetByTransactionID(ctx, transactionID)
 	if err != nil {
 		return err
 	}
-
 	if transaction == nil {
 		return errors.New("transaction not found")
 	}
+	if transaction.UserID != userID || transaction.SiteID != siteID {
+		return common.ErrUnauthorized
+	}
+	if transaction.PaymentType != model.PaymentTypeSubscription {
+		return errors.New("not a subscription transaction")
+	}
+	if transaction.Status == model.PaymentStatusSuccess && snapshotBool(transaction.Snapshot, "one_time_membership_granted") {
+		return nil
+	}
 
+	return s.FulfillOrderByTransactionID(ctx, siteID, transactionID)
+}
+
+// FulfillOrderByTransactionID 根据本地订单号向 Stripe 核验 Checkout 是否已付款，并更新 status=2、发放会员
+func (s *stripeService) FulfillOrderByTransactionID(ctx *gin.Context, siteID, transactionID string) error {
+	if transactionID == "" || siteID == "" {
+		return errors.New("siteId and orderId are required")
+	}
+
+	transaction, err := s.paymentTransactionRepo.GetByTransactionID(ctx, transactionID)
+	if err != nil {
+		return err
+	}
+	if transaction == nil {
+		return errors.New("transaction not found")
+	}
 	if transaction.SiteID != siteID {
-		// If there are multiple sites, the callback will be triggered multiple times, ignore inconsistent sites
-		log.Warning(ctx, fmt.Sprintf("Transaction site ID mismatch: transactionID=%s, siteID=%s", transactionID, siteID))
-		return nil
+		return fmt.Errorf("transaction site mismatch")
 	}
 
-	// If transaction already processed, just return success
+	config, err := s.paymentConfigRepo.GetBySiteIDAndProvider(ctx, siteID, "stripe")
+	if err != nil {
+		return err
+	}
+	if config == nil || !config.IsActive || config.StripeSecretKey == "" {
+		return common.ErrPaymentProviderNotConfigured
+	}
+	s.client.SetAPIKey(config.StripeSecretKey)
+
+	sessionID := transaction.ProviderPaymentID
+	if sessionID == "" {
+		return errors.New("checkout session not found for transaction")
+	}
+	session, err := s.client.RetrieveSession(sessionID)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve checkout session: %w", err)
+	}
+	if string(session.PaymentStatus) != string(goStripe.CheckoutSessionPaymentStatusPaid) {
+		return errors.New("payment not completed")
+	}
+
+	return s.fulfillCheckoutSessionCompleted(ctx, siteID, session)
+}
+
+func (s *stripeService) fulfillCheckoutSessionCompleted(ctx *gin.Context, siteID string, session *goStripe.CheckoutSession) error {
+	if session == nil {
+		return errors.New("checkout session is nil")
+	}
+
+	// Webhook 事件体里的 metadata 可能不完整，向 Stripe 拉取完整 Session
+	if session.Metadata == nil || session.Metadata["transaction_id"] == "" {
+		lookupSiteID := siteID
+		if pending, _ := s.paymentTransactionRepo.GetByProviderPaymentID(ctx, "stripe", session.ID); pending != nil {
+			lookupSiteID = pending.SiteID
+		} else if session.Metadata != nil && session.Metadata["site_id"] != "" {
+			lookupSiteID = session.Metadata["site_id"]
+		}
+		config, cfgErr := s.paymentConfigRepo.GetBySiteIDAndProvider(ctx, lookupSiteID, "stripe")
+		if cfgErr == nil && config != nil && config.StripeSecretKey != "" {
+			s.client.SetAPIKey(config.StripeSecretKey)
+			full, retrieveErr := s.client.RetrieveSession(session.ID)
+			if retrieveErr == nil && full != nil {
+				session = full
+			}
+		}
+	}
+
+	transaction, err := s.resolveCheckoutTransaction(ctx, session)
+	if err != nil {
+		return err
+	}
+	if transaction == nil {
+		return errors.New("transaction not found for checkout session")
+	}
+
+	// 业务处理一律以订单上的 site_id 为准，避免 Webhook URL 上 siteId 参数不准导致第二次支付被跳过
+	if siteID != transaction.SiteID {
+		log.Warning(ctx, fmt.Sprintf("Webhook siteId adjusted: callback=%s, transaction=%s, session=%s",
+			siteID, transaction.SiteID, session.ID))
+	}
+	siteID = transaction.SiteID
+
 	if transaction.Status == model.PaymentStatusSuccess {
+		if transaction.PaymentType == model.PaymentTypeSubscription &&
+			isOneTimeSubscriptionCheckout(transaction, stripeSubscriptionIDFromSession(session)) &&
+			!snapshotBool(transaction.Snapshot, "one_time_membership_granted") {
+			// 已成功但未发放会员（例如上次 UpdateBalance 失败导致回滚不完整时的补偿，或历史脏数据）
+			subid := stripeSubscriptionIDFromSession(session)
+			return s.service.Tx().Transaction(ctx, func(ctx context.Context) error {
+				return s.processSubscriptionPayment(ctx, subid, transaction)
+			})
+		}
 		return nil
 	}
 
-	// Update transaction status to success
 	transaction.Status = model.PaymentStatusSuccess
 	transaction.ProviderPaymentID = session.ID
-	// Execute transaction, including updating transaction status and adding coins
+
 	err = s.service.Tx().Transaction(ctx, func(ctx context.Context) error {
-		// 1. Update transaction status
 		if err := s.paymentTransactionRepo.Update(ctx, transaction); err != nil {
 			return err
 		}
 
-		// 2. Process payment results (add coins, etc.)
 		switch transaction.PaymentType {
 		case model.PaymentTypeCoinPackage:
-			if err := s.processCoinPackagePayment(ctx, transaction); err != nil {
-				return err
-			}
+			return s.processCoinPackagePayment(ctx, transaction)
 		case model.PaymentTypeSubscription:
-			// Process subscription payment - update user's premium status
-			subid := ""
-			if session.Subscription != nil {
-				subid = session.Subscription.ID
-			}
-			if err := s.processSubscriptionPayment(ctx, subid, transaction); err != nil {
-				return err
-			}
+			subid := stripeSubscriptionIDFromSession(session)
+			return s.processSubscriptionPayment(ctx, subid, transaction)
 		default:
-			return fmt.Errorf("unsupported payment type: %d", transaction.PaymentType) //new error handling
+			return fmt.Errorf("unsupported payment type: %d", transaction.PaymentType)
 		}
-		return nil
 	})
-
 	if err != nil {
 		log.Error(ctx, "Transaction failed: "+err.Error())
 		return err
 	}
 
-	// 3. 发送打点事件（Facebook 和数数）
 	if s.trackingService != nil {
-		// 在新协程中发送打点，避免阻塞支付流程
 		go func() {
-			// 使用新的 context，避免原 context 被取消
 			trackingCtx := context.Background()
 			if trackErr := s.trackingService.TrackPurchase(trackingCtx, transaction); trackErr != nil {
 				fmt.Printf("打点事件发送失败: %v\n", trackErr)
@@ -649,6 +752,194 @@ func (s *stripeService) handleCheckoutSessionCompleted(ctx *gin.Context, siteID 
 	}
 
 	return nil
+}
+
+func stripeSubscriptionIDFromSession(session *goStripe.CheckoutSession) string {
+	if session.Subscription != nil {
+		return session.Subscription.ID
+	}
+	return ""
+}
+
+// resolveCheckoutTransaction 优先用 Checkout Session ID 定位当前这笔订单（避免 metadata 指向旧单）
+func (s *stripeService) resolveCheckoutTransaction(ctx context.Context, session *goStripe.CheckoutSession) (*model.PaymentTransaction, error) {
+	if session == nil {
+		return nil, errors.New("checkout session is nil")
+	}
+
+	// 创建订单时 provider_payment_id = cs_xxx，与本次 Session 一一对应
+	if session.ID != "" {
+		tx, err := s.paymentTransactionRepo.GetByProviderPaymentID(ctx, "stripe", session.ID)
+		if err != nil {
+			return nil, err
+		}
+		if tx != nil {
+			return tx, nil
+		}
+	}
+
+	if session.Metadata != nil {
+		if tid := session.Metadata["transaction_id"]; tid != "" {
+			tx, err := s.paymentTransactionRepo.GetByTransactionID(ctx, tid)
+			if err != nil {
+				return nil, err
+			}
+			if tx != nil {
+				return tx, nil
+			}
+		}
+	}
+
+	return nil, nil
+}
+
+// handlePaymentIntentSucceeded 一次性 Checkout（mode=payment）在部分场景下主要收到该事件而非 session.completed
+func (s *stripeService) handlePaymentIntentSucceeded(ctx *gin.Context, siteID string, event *goStripe.Event) error {
+	var pi goStripe.PaymentIntent
+	if err := json.Unmarshal(event.Data.Raw, &pi); err != nil {
+		return err
+	}
+
+	transactionID := ""
+	if pi.Metadata != nil {
+		transactionID = pi.Metadata["transaction_id"]
+	}
+
+	var transaction *model.PaymentTransaction
+	var err error
+	if transactionID != "" {
+		transaction, err = s.paymentTransactionRepo.GetByTransactionID(ctx, transactionID)
+		if err != nil {
+			return err
+		}
+	}
+	if transaction == nil {
+		return nil
+	}
+
+	if transaction.PaymentType != model.PaymentTypeSubscription && transaction.PaymentType != model.PaymentTypeCoinPackage {
+		return nil
+	}
+
+	config, err := s.paymentConfigRepo.GetBySiteIDAndProvider(ctx, transaction.SiteID, "stripe")
+	if err != nil {
+		return err
+	}
+	if config == nil || !config.IsActive || config.StripeSecretKey == "" {
+		return common.ErrPaymentProviderNotConfigured
+	}
+	s.client.SetAPIKey(config.StripeSecretKey)
+
+	sessionID := transaction.ProviderPaymentID
+	if sessionID == "" {
+		return nil
+	}
+	session, err := s.client.RetrieveSession(sessionID)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve checkout session for payment_intent: %w", err)
+	}
+	if string(session.PaymentStatus) != string(goStripe.CheckoutSessionPaymentStatusPaid) {
+		return nil
+	}
+
+	return s.fulfillCheckoutSessionCompleted(ctx, transaction.SiteID, session)
+}
+
+// handleChargeSucceeded 兜底：部分环境只投递 charge.succeeded
+func (s *stripeService) handleChargeSucceeded(ctx *gin.Context, siteID string, event *goStripe.Event) error {
+	var charge goStripe.Charge
+	if err := json.Unmarshal(event.Data.Raw, &charge); err != nil {
+		return err
+	}
+	if charge.PaymentIntent == nil || charge.PaymentIntent.ID == "" {
+		return nil
+	}
+
+	lookupSiteID := siteID
+	if lookupSiteID == "" {
+		lookupSiteID = peekSiteIDFromCharge(event)
+	}
+	config, err := s.paymentConfigRepo.GetBySiteIDAndProvider(ctx, lookupSiteID, "stripe")
+	if err != nil {
+		return err
+	}
+	if config == nil || !config.IsActive || config.StripeSecretKey == "" {
+		return common.ErrPaymentProviderNotConfigured
+	}
+	s.client.SetAPIKey(config.StripeSecretKey)
+
+	pi, err := s.client.GetPaymentIntent(charge.PaymentIntent.ID)
+	if err != nil {
+		return fmt.Errorf("failed to get payment intent for charge: %w", err)
+	}
+
+	transactionID := ""
+	if pi.Metadata != nil {
+		transactionID = pi.Metadata["transaction_id"]
+	}
+
+	var transaction *model.PaymentTransaction
+	if transactionID != "" {
+		transaction, err = s.paymentTransactionRepo.GetByTransactionID(ctx, transactionID)
+		if err != nil {
+			return err
+		}
+	}
+	if transaction == nil {
+		return nil
+	}
+
+	if transaction.ProviderPaymentID == "" {
+		return nil
+	}
+	session, err := s.client.RetrieveSession(transaction.ProviderPaymentID)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve checkout session for charge: %w", err)
+	}
+	if string(session.PaymentStatus) != string(goStripe.CheckoutSessionPaymentStatusPaid) {
+		return nil
+	}
+
+	return s.fulfillCheckoutSessionCompleted(ctx, transaction.SiteID, session)
+}
+
+// peekStripeWebhookPayload 从 Webhook 原始 JSON 预读 site_id 与 checkout session id（验签前用于定位站点配置）
+func peekStripeWebhookPayload(payload []byte) (siteID, checkoutSessionID string) {
+	var envelope struct {
+		Type string `json:"type"`
+		Data struct {
+			Object json.RawMessage `json:"object"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(payload, &envelope); err != nil {
+		return "", ""
+	}
+
+	var obj struct {
+		ID       string            `json:"id"`
+		Metadata map[string]string `json:"metadata"`
+	}
+	if err := json.Unmarshal(envelope.Data.Object, &obj); err != nil {
+		return "", ""
+	}
+	if obj.Metadata != nil {
+		siteID = obj.Metadata["site_id"]
+	}
+	if strings.HasPrefix(string(envelope.Type), "checkout.session") {
+		checkoutSessionID = obj.ID
+	}
+	return siteID, checkoutSessionID
+}
+
+func peekSiteIDFromCharge(event *goStripe.Event) string {
+	var charge goStripe.Charge
+	if err := json.Unmarshal(event.Data.Raw, &charge); err != nil {
+		return ""
+	}
+	if charge.Metadata != nil && charge.Metadata["site_id"] != "" {
+		return charge.Metadata["site_id"]
+	}
+	return ""
 }
 
 // processCoinPackagePayment handles successful coin package payments
@@ -809,6 +1100,7 @@ func (s *stripeService) CreateSubscriptionOrder(ctx *gin.Context, userID string,
 	if pkg.SiteID != req.SiteID {
 		return nil, errors.New("subscription package does not belong to this site")
 	}
+
 	config, err := s.paymentConfigRepo.GetBySiteIDAndProvider(ctx, req.SiteID, "stripe")
 	if err != nil {
 		return nil, err
@@ -818,47 +1110,45 @@ func (s *stripeService) CreateSubscriptionOrder(ctx *gin.Context, userID string,
 	}
 	s.client.SetAPIKey(config.StripeSecretKey)
 
-	// Check if the user already has an active subscription
-	/*
-	sub, err := s.userSubscriptionRepo.GetActiveByUserAndSite(ctx, userID, req.SiteID)
+	// 当前仍有有效的 Stripe 自动续订（sub_）则禁止重复下单；其余用户（含已过期老订阅）均走一次性 Checkout
+	legacySub, err := s.userSubscriptionRepo.GetActiveLegacyStripeRecurringSubscription(ctx, userID, req.SiteID)
 	if err != nil {
 		return nil, err
 	}
-	if sub != nil {
-		//以strip的方式来判断是否已经有订阅
-		isActive, err := s.client.IsSubscriptionActive(sub.ProviderSubscriptionID)
-		if err != nil {
-			return nil, err
+	if legacySub != nil {
+		stripeActive, stripeErr := s.client.IsSubscriptionActive(legacySub.ProviderSubscriptionID)
+		if stripeErr != nil {
+			s.service.Logger().Warn("Failed to verify legacy Stripe subscription status, blocking new order",
+				zap.Error(stripeErr),
+				zap.String("subscriptionID", legacySub.ProviderSubscriptionID),
+				zap.String("userID", userID),
+			)
+			return nil, errors.New("user already has an active subscription")
 		}
-		if isActive {
-			log.Error(ctx, "User already has an active subscription: "+userID)
+		if stripeActive {
 			return nil, errors.New("user already has an active subscription")
 		}
 	}
-		*/
 
-	// Generate transaction ID
+	return s.createOneTimeSubscriptionOrder(ctx, userID, req, pkg)
+}
+
+// createOneTimeSubscriptionOrder 与购金币相同的一次性 Checkout，每周期由用户主动购买
+func (s *stripeService) createOneTimeSubscriptionOrder(ctx *gin.Context, userID string, req api.OrderCreateRequest, pkg *model.SubscriptionPackage) (*api.OrderCreateResponse, error) {
 	transactionID := uuid.New().String()
 
-	// Build success and cancel URLs, always attaching siteId & orderId like coin payments
 	var successURL, cancelURL string
 	if req.ReturnURL == "" {
-		// Use default success URL from config
 		successURL = s.paymentSuccessURL(s.conf.GetString("webhook.stripe.sucess_url"), req.SiteID, transactionID)
 	} else {
-		// Use custom frontend URL as base, but still append order info
 		successURL = s.paymentSuccessURL(req.ReturnURL, req.SiteID, transactionID)
 	}
-
 	if req.CancelURL == "" {
-		// Use default cancel URL from config
 		cancelURL = s.paymentCancelURL(s.conf.GetString("webhook.stripe.cancel_url"), req.SiteID, transactionID)
 	} else {
-		// Use custom frontend URL as base, but still append order info
 		cancelURL = s.paymentCancelURL(req.CancelURL, req.SiteID, transactionID)
 	}
 
-	// Set up metadata
 	metadata := map[string]string{
 		"site_id":        req.SiteID,
 		"user_id":        userID,
@@ -866,54 +1156,41 @@ func (s *stripeService) CreateSubscriptionOrder(ctx *gin.Context, userID string,
 		"transaction_id": transactionID,
 		"package_id":     pkg.PackageID,
 		"interval":       pkg.Interval,
+		"billing_mode":   "one_time",
 	}
 
-	// Convert interval from database format to Stripe format
-	var stripeInterval string
-	switch pkg.Interval {
-	case "week":
-		stripeInterval = "week"
-	case "month":
-		stripeInterval = "month"
-	case "year":
-		stripeInterval = "year"
-	default:
-		return nil, errors.New("invalid subscription interval")
-	}
-
-	// Create the subscription checkout session
-	sessionID, checkoutURL, err := s.client.CreateSubscriptionCheckoutSession(
+	sessionID, checkoutURL, err := s.client.CreateCheckoutSessionWithPayment(
 		pkg.Name,
 		pkg.Description,
 		pkg.Price,
 		pkg.Currency,
-		stripeInterval,
 		successURL,
 		cancelURL,
 		metadata,
 	)
-
 	if err != nil {
 		return nil, err
 	}
 
-	// Store transaction in database
-
-	// Create snapshot of package at time of purchase
 	snapshot := model.JSONMap{
-		"package_id":          pkg.PackageID,
-		"name":                pkg.Name,
-		"description":         pkg.Description,
-		"interval":            pkg.Interval,
-		"price":               pkg.Price,
-		"currency":            pkg.Currency,
-		"original_price":      pkg.OriginalPrice,
-		"discount_percentage": pkg.DiscountPercentage,
-		"coins":               pkg.Coins,
-		"rights":              pkg.Rights,
+		"package_id":                  pkg.PackageID,
+		"name":                        pkg.Name,
+		"description":                 pkg.Description,
+		"interval":                    pkg.Interval,
+		"price":                       pkg.Price,
+		"currency":                    pkg.Currency,
+		"original_price":              pkg.OriginalPrice,
+		"discount_percentage":         pkg.DiscountPercentage,
+		"coins":                       pkg.Coins,
+		"coin_amount":                 float64(pkg.Coins),
+		"rights":                      pkg.Rights,
+		"stripe_subscription_billing": "one_time",
 	}
+	if len(req.TrackingContext) > 0 {
+		snapshot["tracking_context"] = req.TrackingContext
+	}
+	snapshot = analytics.MergeMetaIntoSnapshot(snapshot, req.Meta)
 
-	// Create transaction record
 	tx := &model.PaymentTransaction{
 		TransactionID:     transactionID,
 		OrderID:           transactionID,
@@ -929,26 +1206,156 @@ func (s *stripeService) CreateSubscriptionOrder(ctx *gin.Context, userID string,
 		RelatedType:       model.RelatedTypeSubscription,
 		Snapshot:          snapshot,
 	}
-
-	err = s.paymentTransactionRepo.Create(ctx, tx)
-	if err != nil {
+	if err := s.paymentTransactionRepo.Create(ctx, tx); err != nil {
 		return nil, err
 	}
 
-	// Return response
-	response := &api.OrderCreateResponse{
+	return &api.OrderCreateResponse{
 		OrderID:       transactionID,
 		CheckoutURL:   checkoutURL,
 		SuccessURL:    successURL,
 		CancelURL:     cancelURL,
 		PaymentStatus: "pending",
+	}, nil
+}
+
+// createLegacyRecurringSubscriptionOrder 老用户 Stripe 自动续订 Checkout（保持原有逻辑）
+func (s *stripeService) createLegacyRecurringSubscriptionOrder(ctx *gin.Context, userID string, req api.OrderCreateRequest, pkg *model.SubscriptionPackage) (*api.OrderCreateResponse, error) {
+	transactionID := uuid.New().String()
+
+	var successURL, cancelURL string
+	if req.ReturnURL == "" {
+		successURL = s.paymentSuccessURL(s.conf.GetString("webhook.stripe.sucess_url"), req.SiteID, transactionID)
+	} else {
+		successURL = s.paymentSuccessURL(req.ReturnURL, req.SiteID, transactionID)
+	}
+	if req.CancelURL == "" {
+		cancelURL = s.paymentCancelURL(s.conf.GetString("webhook.stripe.cancel_url"), req.SiteID, transactionID)
+	} else {
+		cancelURL = s.paymentCancelURL(req.CancelURL, req.SiteID, transactionID)
 	}
 
-	return response, nil
+	metadata := map[string]string{
+		"site_id":        req.SiteID,
+		"user_id":        userID,
+		"package_type":   "subscription",
+		"transaction_id": transactionID,
+		"package_id":     pkg.PackageID,
+		"interval":       pkg.Interval,
+		"billing_mode":   "recurring",
+	}
+
+	var stripeInterval string
+	switch pkg.Interval {
+	case "week":
+		stripeInterval = "week"
+	case "month":
+		stripeInterval = "month"
+	case "year":
+		stripeInterval = "year"
+	default:
+		return nil, errors.New("invalid subscription interval")
+	}
+
+	sessionID, checkoutURL, err := s.client.CreateSubscriptionCheckoutSession(
+		pkg.Name,
+		pkg.Description,
+		pkg.Price,
+		pkg.Currency,
+		stripeInterval,
+		successURL,
+		cancelURL,
+		metadata,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	snapshot := model.JSONMap{
+		"package_id":                  pkg.PackageID,
+		"name":                        pkg.Name,
+		"description":                 pkg.Description,
+		"interval":                    pkg.Interval,
+		"price":                       pkg.Price,
+		"currency":                    pkg.Currency,
+		"original_price":              pkg.OriginalPrice,
+		"discount_percentage":         pkg.DiscountPercentage,
+		"coins":                       pkg.Coins,
+		"coin_amount":                 float64(pkg.Coins),
+		"rights":                      pkg.Rights,
+		"stripe_subscription_billing": "initial",
+	}
+	snapshot = analytics.MergeMetaIntoSnapshot(snapshot, req.Meta)
+
+	tx := &model.PaymentTransaction{
+		TransactionID:     transactionID,
+		OrderID:           transactionID,
+		UserID:            userID,
+		SiteID:            req.SiteID,
+		Amount:            pkg.Price,
+		Currency:          pkg.Currency,
+		Provider:          "stripe",
+		ProviderPaymentID: sessionID,
+		PaymentType:       model.PaymentTypeSubscription,
+		Status:            model.PaymentStatusPending,
+		RelatedID:         pkg.PackageID,
+		RelatedType:       model.RelatedTypeSubscription,
+		Snapshot:          snapshot,
+	}
+	if err := s.paymentTransactionRepo.Create(ctx, tx); err != nil {
+		return nil, err
+	}
+
+	return &api.OrderCreateResponse{
+		OrderID:       transactionID,
+		CheckoutURL:   checkoutURL,
+		SuccessURL:    successURL,
+		CancelURL:     cancelURL,
+		PaymentStatus: "pending",
+	}, nil
 }
 
 // processSubscriptionPayment handles successful subscription payments
 func (s *stripeService) processSubscriptionPayment(ctx context.Context, subid string, transaction *model.PaymentTransaction) error {
+	if isOneTimeSubscriptionCheckout(transaction, subid) {
+		return s.processOneTimeSubscriptionPayment(ctx, transaction)
+	}
+	return s.processLegacyRecurringSubscriptionPayment(ctx, subid, transaction)
+}
+
+func isOneTimeSubscriptionCheckout(transaction *model.PaymentTransaction, subid string) bool {
+	if transaction != nil && transaction.Snapshot != nil {
+		if v, ok := transaction.Snapshot["stripe_subscription_billing"]; ok {
+			if s, ok := v.(string); ok && s == "one_time" {
+				return true
+			}
+		}
+	}
+	return subid == "" || !strings.HasPrefix(subid, "sub_")
+}
+
+func snapshotBool(snapshot model.JSONMap, key string) bool {
+	if snapshot == nil {
+		return false
+	}
+	v, ok := snapshot[key]
+	if !ok {
+		return false
+	}
+	switch x := v.(type) {
+	case bool:
+		return x
+	case float64:
+		return x != 0
+	case string:
+		return x == "true" || x == "1"
+	default:
+		return false
+	}
+}
+
+// processLegacyRecurringSubscriptionPayment 处理老用户 Stripe 自动续订订阅的首单
+func (s *stripeService) processLegacyRecurringSubscriptionPayment(ctx context.Context, subid string, transaction *model.PaymentTransaction) error {
 	config, err := s.paymentConfigRepo.GetBySiteIDAndProvider(ctx, transaction.SiteID, "stripe")
 	if err != nil {
 		return err
@@ -1051,6 +1458,131 @@ func (s *stripeService) processSubscriptionPayment(ctx context.Context, subid st
 	return nil
 }
 
+// processOneTimeSubscriptionPayment 处理按周期一次性购买的订阅（与购金币相同 Checkout，到期需再次购买）
+func (s *stripeService) processOneTimeSubscriptionPayment(ctx context.Context, transaction *model.PaymentTransaction) error {
+	if snapshotBool(transaction.Snapshot, "one_time_membership_granted") {
+		return nil
+	}
+
+	pkg, err := s.subscriptionPackageRepo.GetByPackageID(ctx, transaction.RelatedID)
+	if err != nil {
+		return fmt.Errorf("failed to get subscription package: %w", err)
+	}
+	if pkg == nil {
+		return errors.New("subscription package not found")
+	}
+
+	user, err := s.userRepository.GetByUserID(ctx, transaction.UserID)
+	if err != nil {
+		return fmt.Errorf("failed to get user: %w", err)
+	}
+	if user == nil {
+		return fmt.Errorf("user not found: %s", transaction.UserID)
+	}
+
+	now := time.Now()
+	startTime := now
+	// 若当前会员未过期，新购周期从到期日起算（叠加）
+	if user.PremiumExpiresAt != nil && user.PremiumExpiresAt.After(now) {
+		startTime = *user.PremiumExpiresAt
+	}
+	endTime := subscriptionPeriodEnd(startTime, pkg.Interval)
+
+	onetimeSub := int8(1)
+	if err := s.userRepository.UpdatePremiumType(ctx, transaction.UserID, 1, &endTime, &onetimeSub); err != nil {
+		return fmt.Errorf("failed to update user premium status: %w", err)
+	}
+
+	// 查找该用户在本站的一次性 Stripe 订阅记录（非 sub_ 自动续订）
+	subs, err := s.userSubscriptionRepo.GetByUserID(ctx, transaction.UserID, transaction.SiteID)
+	if err != nil {
+		return fmt.Errorf("failed to list user subscriptions: %w", err)
+	}
+
+	var existing *model.UserSubscription
+	for _, sub := range subs {
+		if sub.Provider == "stripe" && !strings.HasPrefix(sub.ProviderSubscriptionID, "sub_") {
+			existing = sub
+			break
+		}
+	}
+
+	providerPaymentID := transaction.ProviderPaymentID
+	if providerPaymentID == "" {
+		providerPaymentID = transaction.TransactionID
+	}
+
+	if existing != nil {
+		existing.PackageID = transaction.RelatedID
+		existing.ProviderSubscriptionID = providerPaymentID
+		existing.Status = model.SubscriptionStatusActive
+		existing.CurrentPeriodStart = startTime
+		existing.CurrentPeriodEnd = endTime
+		existing.CancelAtPeriodEnd = false
+		if err := s.userSubscriptionRepo.Update(ctx, existing); err != nil {
+			return fmt.Errorf("failed to update user subscription: %w", err)
+		}
+	} else {
+		userSubscription := &model.UserSubscription{
+			SubscriptionID:         uuid.New().String(),
+			UserID:                 transaction.UserID,
+			SiteID:                 transaction.SiteID,
+			PackageID:              transaction.RelatedID,
+			Provider:               transaction.Provider,
+			ProviderSubscriptionID: providerPaymentID,
+			Status:                 model.SubscriptionStatusActive,
+			CurrentPeriodStart:     startTime,
+			CurrentPeriodEnd:       endTime,
+		}
+		if err := s.userSubscriptionRepo.Create(ctx, userSubscription); err != nil {
+			return fmt.Errorf("failed to save user subscription details: %w", err)
+		}
+	}
+
+	if _, err = s.userCoinsRepository.UpdateBalance(ctx, transaction.UserID, transaction.SiteID, 0, transaction.Amount); err != nil {
+		// 消费统计失败不应阻断会员发放
+		s.service.Logger().Warn("Failed to update user coin spending stats for subscription",
+			zap.Error(err),
+			zap.String("userID", transaction.UserID),
+			zap.String("transactionID", transaction.TransactionID),
+		)
+	}
+
+	if pkg.Coins > 0 {
+		if _, err = s.userCoinsRepository.AddPresentCoins(ctx, transaction.UserID, transaction.SiteID, pkg.Coins); err != nil {
+			s.service.Logger().Error("Failed to grant present coins for one-time subscription",
+				zap.Error(err),
+				zap.String("userID", transaction.UserID),
+				zap.String("packageID", pkg.PackageID),
+			)
+		}
+	}
+
+	if transaction.Snapshot == nil {
+		transaction.Snapshot = model.JSONMap{}
+	}
+	transaction.Snapshot["one_time_membership_granted"] = true
+	if err := s.paymentTransactionRepo.Update(ctx, transaction); err != nil {
+		return fmt.Errorf("failed to mark one-time membership granted: %w", err)
+	}
+
+	return nil
+}
+
+// subscriptionPeriodEnd 根据套餐周期计算结束时间
+func subscriptionPeriodEnd(start time.Time, interval string) time.Time {
+	switch interval {
+	case "week":
+		return start.AddDate(0, 0, 7)
+	case "month":
+		return start.AddDate(0, 1, 0)
+	case "year":
+		return start.AddDate(1, 0, 0)
+	default:
+		return start.AddDate(0, 1, 0)
+	}
+}
+
 // CancelSubscription cancels a subscription
 func (s *stripeService) CancelSubscription(ctx context.Context, userID string, subscriptionID string, cancelAtPeriodEnd bool) error {
 	// Validate request
@@ -1072,6 +1604,15 @@ func (s *stripeService) CancelSubscription(ctx context.Context, userID string, s
 
 	if userSubscription.UserID != userID {
 		return common.ErrUnauthorized
+	}
+
+	// 一次性订阅无 Stripe 自动续订合约，仅更新本地状态
+	if !strings.HasPrefix(userSubscription.ProviderSubscriptionID, "sub_") {
+		userSubscription.CancelAtPeriodEnd = true
+		if !cancelAtPeriodEnd {
+			userSubscription.Status = model.SubscriptionStatusCancelled
+		}
+		return s.userSubscriptionRepo.Update(ctx, userSubscription)
 	}
 
 	// Get the payment config for the subscription's site
@@ -1107,6 +1648,51 @@ func (s *stripeService) CancelSubscription(ctx context.Context, userID string, s
 
 }
 
+// extractInvoiceSubscriptionIDFromWebhook 从 invoice.paid 等事件的原始 JSON 解析订阅 ID。
+// stripe-go v82 的 Invoice 已不含顶级 subscription 字段；旧版 Webhook 或部分 payload 仅含
+// "subscription":"sub_xxx"，或 parent 未展开时，需从 Raw 回退解析，否则续订逻辑（含数数）整段被跳过。
+func extractInvoiceSubscriptionIDFromWebhook(raw []byte) string {
+	var root map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &root); err != nil {
+		return ""
+	}
+	trySubJSON := func(sub json.RawMessage) string {
+		if len(sub) == 0 {
+			return ""
+		}
+		var idStr string
+		if json.Unmarshal(sub, &idStr) == nil && strings.HasPrefix(idStr, "sub_") {
+			return idStr
+		}
+		var obj struct {
+			ID string `json:"id"`
+		}
+		if json.Unmarshal(sub, &obj) == nil && strings.HasPrefix(obj.ID, "sub_") {
+			return obj.ID
+		}
+		return ""
+	}
+	if parent, ok := root["parent"]; ok {
+		var p map[string]json.RawMessage
+		if json.Unmarshal(parent, &p) == nil {
+			if sd, ok := p["subscription_details"]; ok {
+				var sdet map[string]json.RawMessage
+				if json.Unmarshal(sd, &sdet) == nil {
+					if sub, ok := sdet["subscription"]; ok {
+						if id := trySubJSON(sub); id != "" {
+							return id
+						}
+					}
+				}
+			}
+		}
+	}
+	if sub, ok := root["subscription"]; ok {
+		return trySubJSON(sub)
+	}
+	return ""
+}
+
 // handleInvoicePaid handles subscription renewal payments
 func (s *stripeService) handleInvoicePaid(ctx *gin.Context, siteID string, event *goStripe.Event) error {
 	var invoice goStripe.Invoice
@@ -1120,8 +1706,11 @@ func (s *stripeService) handleInvoicePaid(ctx *gin.Context, siteID string, event
 		return nil
 	}
 	providerSubscriptionID := ""
-	if invoice.Parent != nil && invoice.Parent.SubscriptionDetails != nil {
+	if invoice.Parent != nil && invoice.Parent.SubscriptionDetails != nil && invoice.Parent.SubscriptionDetails.Subscription != nil {
 		providerSubscriptionID = invoice.Parent.SubscriptionDetails.Subscription.ID
+	}
+	if providerSubscriptionID == "" {
+		providerSubscriptionID = extractInvoiceSubscriptionIDFromWebhook(event.Data.Raw)
 	}
 	if providerSubscriptionID == "" {
 		log.Warning(ctx, fmt.Sprintf("Invoice is not related to a subscription: %s", invoice.ID))
@@ -1154,18 +1743,32 @@ func (s *stripeService) handleInvoicePaid(ctx *gin.Context, siteID string, event
 		log.Warning(ctx, fmt.Sprintf("Package not found for this site: packageID=%s, siteID=%s", pkg.PackageID, siteID))
 		return nil
 	}
+
+	// 同一 invoice 可能收到 invoice.paid 与 invoice.payment_succeeded，避免重复记账/发币/打点
+	existing, err := s.paymentTransactionRepo.GetByProviderPaymentID(ctx, "stripe", invoice.ID)
+	if err != nil {
+		return err
+	}
+	if existing != nil {
+		log.Info(ctx, fmt.Sprintf("Renewal invoice already processed, skip duplicate webhook: invoice=%s", invoice.ID))
+		return nil
+	}
+
 	// 创建 snapshot 和交易记录
 	snapshot := model.JSONMap{
-		"package_id":          pkg.PackageID,
-		"name":                pkg.Name + " (Renewal)",
-		"description":         pkg.Description + " (Renewal)",
-		"interval":            pkg.Interval,
-		"price":               pkg.Price,
-		"currency":            pkg.Currency,
-		"original_price":      pkg.OriginalPrice,
-		"discount_percentage": pkg.DiscountPercentage,
-		"coins":               pkg.Coins,
-		"rights":              pkg.Rights,
+		"package_id":                  pkg.PackageID,
+		"name":                        pkg.Name,
+		"description":                 pkg.Description,
+		"interval":                    pkg.Interval,
+		"price":                       pkg.Price,
+		"currency":                    pkg.Currency,
+		"original_price":              pkg.OriginalPrice,
+		"discount_percentage":         pkg.DiscountPercentage,
+		"coins":                       pkg.Coins,
+		"coin_amount":                 float64(pkg.Coins),
+		"rights":                      pkg.Rights,
+		"stripe_subscription_billing": "renewal",
+		"is_subscription_renewal":     true,
 	}
 
 	// Create transaction record
@@ -1188,6 +1791,16 @@ func (s *stripeService) handleInvoicePaid(ctx *gin.Context, siteID string, event
 
 	err = s.paymentTransactionRepo.Create(ctx, tx)
 	if err != nil {
+		// 并发：invoice.paid 与 invoice.payment_succeeded 同时到达，或 Stripe 重试；唯一键保证仅一条流水
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
+			log.Info(ctx, fmt.Sprintf("Renewal transaction duplicate (unique invoice id), skip: invoice=%s", invoice.ID))
+			return nil
+		}
+		var mysqlErr *mysql.MySQLError
+		if errors.As(err, &mysqlErr) && mysqlErr.Number == 1062 {
+			log.Info(ctx, fmt.Sprintf("Renewal transaction duplicate key 1062, skip: invoice=%s", invoice.ID))
+			return nil
+		}
 		return err
 	}
 
@@ -1205,6 +1818,15 @@ func (s *stripeService) handleInvoicePaid(ctx *gin.Context, siteID string, event
 			// Don't fail the transaction for this error, just log it
 		} else {
 			log.Info(ctx, fmt.Sprintf("Granted %d coins to user %s for subscription renewal %s", pkg.Coins, userSubscription.UserID, pkg.PackageID))
+		}
+	}
+
+	// 续订与首次订阅一致上报数数（同步 + 结构化日志，避免 goroutine 内失败不可见）
+	if s.trackingService != nil {
+		if trackErr := s.trackingService.TrackPurchase(ctx, tx); trackErr != nil {
+			log.Error(ctx, fmt.Sprintf("续订数数 purchase 打点失败: invoice=%s txn=%s err=%v", invoice.ID, tx.TransactionID, trackErr))
+		} else {
+			log.Info(ctx, fmt.Sprintf("续订数数 purchase 打点成功: invoice=%s txn=%s", invoice.ID, tx.TransactionID))
 		}
 	}
 
@@ -1338,7 +1960,7 @@ func (s *stripeService) handleSubscriptionDeleted(ctx *gin.Context, siteID strin
 	}
 
 	// 取消会员的状态。TODO，事物
-	err = s.userRepository.UpdatePremiumType(ctx, userSubscription.UserID, 0, nil)
+	err = s.userRepository.UpdatePremiumType(ctx, userSubscription.UserID, 0, nil, nil)
 	if err != nil {
 		log.Warning(ctx, fmt.Sprintf("Failed to update user premium status: %s", err.Error()))
 	}

@@ -30,8 +30,9 @@ type SiteInfo struct {
 	TemplateID        *string               `json:"templateId,omitempty" example:"tpl_01f3b2"`
 	TemplateName      *string               `json:"templateName,omitempty" example:"Modern Template"` // Template name
 	GoogleAnalyticsID *string               `json:"googleAnalyticsId" example:"UA-123456789-1"`       // Google Analytics ID, optional
-	FacebookPixelID   *string               `json:"facebookPixelId" example:"1234567890"`             // Facebook Pixel ID, optional
-	ThinkingDataAppId *string               `json:"thinkingdataAppId" example:"app-1234567890"`       // Thinking Data App ID, optional
+	FacebookPixelID          *string `json:"facebookPixelId" example:"1234567890"`                    // Facebook Pixel ID, optional
+	FacebookCapiAccessToken  *string `json:"facebookCapiAccessToken" example:"EAAxxxx..."`            // Meta CAPI access token (creator only), optional
+	ThinkingDataAppId        *string `json:"thinkingdataAppId" example:"app-1234567890"`              // Thinking Data App ID, optional
 	Theme             *int                  `json:"theme,omitempty" example:"0"`                        // accent palette index (visitor); omit on modify to leave unchanged
 	Status            int                   `json:"status" example:"1"`
 	Seo               *SiteSeo              `json:"seo"`

@@ -57,6 +57,7 @@ type StripeClient interface {
 	DeleteWebhookEndpoint(endpointID string) error
 	ValidateWebhookSignature(payload []byte, signature string, secret string) (stripe.Event, error)
 	RetrieveSession(sessionID string) (*stripe.CheckoutSession, error)
+	GetPaymentIntent(paymentIntentID string) (*stripe.PaymentIntent, error)
 	GetShotPressEndpoint(fixWebHook string) (string, string, error)
 	IsSubscriptionActive(subscriptionID string) (bool, error)
 	GetSubscriptionStartEnd(subscriptionID string) (int64, int64, error)
@@ -379,6 +380,15 @@ func (c *stripeClient) RetrieveSession(sessionID string) (*stripe.CheckoutSessio
 	return session.Get(sessionID, nil)
 }
 
+// GetPaymentIntent retrieves a payment intent by ID
+func (c *stripeClient) GetPaymentIntent(paymentIntentID string) (*stripe.PaymentIntent, error) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	stripe.Key = c.apiKey
+
+	return paymentintent.Get(paymentIntentID, nil)
+}
+
 // CreateCheckoutSessionWithPrice creates a checkout session with a price
 func (c *stripeClient) CreateCheckoutSessionWithPayment(
 	productName string,
@@ -415,9 +425,12 @@ func (c *stripeClient) CreateCheckoutSessionWithPayment(
 		},
 	}
 
-	// 保持元数据一致
+	// Session 与 PaymentIntent 都写入 metadata，便于 checkout.session.completed / payment_intent.succeeded 定位订单
 	if metadata != nil {
 		sessionParams.Metadata = metadata
+		sessionParams.PaymentIntentData = &stripe.CheckoutSessionPaymentIntentDataParams{
+			Metadata: metadata,
+		}
 	}
 
 	s, err := session.New(sessionParams)

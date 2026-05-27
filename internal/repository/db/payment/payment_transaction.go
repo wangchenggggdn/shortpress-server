@@ -132,7 +132,8 @@ func (r *paymentTransactionRepository) GetDailyIncomeStatistics(ctx context.Cont
 
 	query := r.DB(ctx).Model(&model.PaymentTransaction{}).
 		Select("DATE(created_at) as date, SUM(amount) as total_amount, COUNT(*) as transaction_count").
-		Where("site_id = ? AND status = ?", siteID, model.PaymentStatusSuccess)
+		Where("site_id = ? AND (status = ? OR (payment_type = ? AND status = ?))",
+			siteID, model.PaymentStatusSuccess, model.PaymentTypeSubscription, model.PaymentStatusExpired)
 
 	// Add time range conditions
 	if !startTime.IsZero() {

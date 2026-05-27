@@ -10,6 +10,7 @@ import (
 	"shortpress-server/internal/middleware"
 	"shortpress-server/internal/repository/db/user"
 	"shortpress-server/internal/service"
+	"shortpress-server/internal/service/analytics"
 	"shortpress-server/pkg/log"
 
 	"shortpress-server/internal/service/payment/coins"
@@ -276,6 +277,8 @@ func (h *PaymentHandler) OrderCreate(ctx *gin.Context) {
 		return
 	}
 
+	_ = analytics.PersistUserMetaClick(ctx, h.userRepository, userID, req.Meta)
+
 	// Create the order based on payment method
 	var response *api.OrderCreateResponse
 	var err error
@@ -300,19 +303,38 @@ func (h *PaymentHandler) OrderCreate(ctx *gin.Context) {
 
 // StripeCallback handles webhook events from Stripe
 func (h *PaymentHandler) StripeCallback(ctx *gin.Context) {
-
-	// Process the webhook
 	err := h.stripeService.HandleWebhook(ctx)
 	if err != nil {
-		// Important: Even on error, return 200 OK to Stripe
-		// This prevents Stripe from retrying the webhook excessively
-		// We'll log the error but tell Stripe we received it
+		h.logger.Error("Stripe webhook processing failed", zap.Error(err), zap.String("query", ctx.Request.URL.RawQuery))
+		// 仍返回 200，避免 Stripe 无限重试；请查看日志排查
 		ctx.String(http.StatusOK, "Webhook received")
 		return
 	}
 
-	// Return success
 	ctx.String(http.StatusOK, "Webhook processed successfully")
+}
+
+// StripeFulfillOrder 支付成功后的主动履约（不依赖 Webhook），用于本地测试或 Webhook 未配置 siteId
+// GET/POST /api/payment/callback/stripe/fulfill?siteId=xxx&orderId=transaction_id
+func (h *PaymentHandler) StripeFulfillOrder(ctx *gin.Context) {
+	siteID := ctx.Query("siteId")
+	orderID := ctx.Query("orderId")
+	if siteID == "" || orderID == "" {
+		api.HandleErrorWithHttpCode(ctx, http.StatusBadRequest, fmt.Errorf("siteId and orderId are required"), nil)
+		return
+	}
+
+	if err := h.stripeService.FulfillOrderByTransactionID(ctx, siteID, orderID); err != nil {
+		h.logger.Error("Stripe fulfill order failed",
+			zap.Error(err),
+			zap.String("siteId", siteID),
+			zap.String("orderId", orderID),
+		)
+		api.HandleError(ctx, err, nil)
+		return
+	}
+
+	api.HandleSuccess(ctx, map[string]string{"orderId": orderID, "status": "fulfilled"})
 }
 
 // PayPalCallback handles webhook events from PayPal

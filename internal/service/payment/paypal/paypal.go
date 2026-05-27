@@ -516,12 +516,19 @@ func (s *paypalService) CreateOrder(ctx *gin.Context, userID string, req api.Ord
 		"paypal_order_id": paypalResp.ID,
 		"package_id":      req.PackageID,
 		"order_type":      string(req.OrderType),
+		"name":            description,
+		"price":           price,
+		"currency":        currency,
+	}
+	if len(req.TrackingContext) > 0 {
+		snapshot["tracking_context"] = req.TrackingContext
 	}
 
 	// Add coin_amount to snapshot for coin packages
 	if req.OrderType == api.OrderTypeCoinPackage && coinAmount > 0 {
 		snapshot["coin_amount"] = float64(coinAmount)
 	}
+	snapshot = analytics.MergeMetaIntoSnapshot(snapshot, req.Meta)
 
 	transaction := &model.PaymentTransaction{
 		TransactionID:     orderID,
@@ -806,7 +813,20 @@ func (s *paypalService) handlePaymentCompleted(ctx *gin.Context, event map[strin
 	}
 
 	log.Info(ctx, fmt.Sprintf("Successfully processed PayPal payment for order %s, amount %s", customID, totalAmount))
+	s.emitTrackPurchase(transaction)
 	return nil
+}
+
+func (s *paypalService) emitTrackPurchase(transaction *model.PaymentTransaction) {
+	if s.trackingService == nil || transaction == nil {
+		return
+	}
+	go func() {
+		trackingCtx := context.Background()
+		if trackErr := s.trackingService.TrackPurchase(trackingCtx, transaction); trackErr != nil {
+			fmt.Printf("PayPal 打点事件发送失败: %v\n", trackErr)
+		}
+	}()
 }
 
 // processSubscriptionPayment handles successful subscription payments
@@ -960,7 +980,6 @@ func (s *paypalService) CreateSubscriptionOrder(ctx *gin.Context, userID string,
 	s.paypalClient.SetCredentials(config.PaypalClientID, config.PaypalClientSecret, config.IsSandbox)
 
 	// Check if the user already has an active subscription
-	/*
 	sub, err := s.userSubscriptionRepo.GetActiveByUserAndSite(ctx, userID, req.SiteID)
 	if err != nil {
 		return nil, err
@@ -976,7 +995,6 @@ func (s *paypalService) CreateSubscriptionOrder(ctx *gin.Context, userID string,
 			}
 		}
 	}
-	*/
 
 	// Generate transaction ID
 	transactionID := uuid.New().String()
@@ -1065,6 +1083,10 @@ func (s *paypalService) CreateSubscriptionOrder(ctx *gin.Context, userID string,
 		"rights":              pkg.Rights,
 		"paypal_plan_id":      planID,
 	}
+	if len(req.TrackingContext) > 0 {
+		snapshot["tracking_context"] = req.TrackingContext
+	}
+	snapshot = analytics.MergeMetaIntoSnapshot(snapshot, req.Meta)
 
 	// Create transaction record
 	tx := &model.PaymentTransaction{
@@ -1309,6 +1331,7 @@ func (s *paypalService) handleSubscriptionActivated(ctx *gin.Context, event map[
 				log.Error(ctx, "Failed to process subscription payment: "+err.Error())
 				return err
 			}
+			s.emitTrackPurchase(transaction)
 		}
 	}
 
@@ -1359,6 +1382,7 @@ func (s *paypalService) handleSubscriptionCreated(ctx *gin.Context, event map[st
 				log.Error(ctx, "Failed to process subscription payment: "+err.Error())
 				return err
 			}
+			s.emitTrackPurchase(transaction)
 		}
 	}
 

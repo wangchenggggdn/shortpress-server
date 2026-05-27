@@ -84,14 +84,19 @@ func ContainsBaseDomain(str string) bool {
 
 // IsOfficialDomain checks if a string is an official domain (ends with BaseDomain)
 func IsOfficialDomain(str string) bool {
-	return strings.HasSuffix(str, GetBaseDomain())
+	baseDomain := GetBaseDomain()
+	if str == baseDomain {
+		return false
+	}
+	return strings.HasSuffix(str, "."+baseDomain)
 }
 
 // ExtractSubdomain extracts the subdomain part before BaseDomain
 // For example: "xxx.myshortpress.com" returns "xxx"
 // Returns empty string if the input doesn't end with BaseDomain
 func ExtractSubdomain(str string) string {
-	if !strings.HasSuffix(str, GetBaseDomain()) {
+	baseDomain := GetBaseDomain()
+	if str == baseDomain || !strings.HasSuffix(str, "."+baseDomain) {
 		return ""
 	}
 

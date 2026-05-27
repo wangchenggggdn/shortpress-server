@@ -6,6 +6,8 @@ import (
 	"shortpress-server/internal/api"
 	"shortpress-server/internal/common"
 	"shortpress-server/internal/middleware"
+	"shortpress-server/internal/repository/db/user"
+	"shortpress-server/internal/service/analytics"
 	"shortpress-server/internal/service/payment/stripe"
 	paypalservice "shortpress-server/internal/service/payment/paypal"
 	"shortpress-server/internal/service/payment/sub"
@@ -21,6 +23,7 @@ type SubscriptionHandler struct {
 	subscriptionService sub.SubscriptionService
 	stripeService       stripe.StripeService
 	paypalService       paypalservice.PaypalService
+	userRepository      user.UserRepository
 }
 
 // NewSubscriptionHandler creates a new subscription handler
@@ -29,12 +32,14 @@ func NewSubscriptionHandler(
 	subscriptionService sub.SubscriptionService,
 	stripeService stripe.StripeService,
 	paypalService paypalservice.PaypalService,
+	userRepository user.UserRepository,
 ) *SubscriptionHandler {
 	return &SubscriptionHandler{
 		Handler:             handler,
 		subscriptionService: subscriptionService,
 		stripeService:       stripeService,
 		paypalService:       paypalService,
+		userRepository:      userRepository,
 	}
 }
 
@@ -265,6 +270,8 @@ func (h *SubscriptionHandler) SubscriptionCreate(ctx *gin.Context) {
 	// Set the order type to subscription
 	req.OrderType = api.OrderTypeSubscription
 
+	_ = analytics.PersistUserMetaClick(ctx, h.userRepository, userID, req.Meta)
+
 	// Create the subscription order based on payment method
 	var response *api.OrderCreateResponse
 	var err error
@@ -286,6 +293,48 @@ func (h *SubscriptionHandler) SubscriptionCreate(ctx *gin.Context) {
 	}
 
 	api.HandleSuccess(ctx, response)
+}
+
+// SubscriptionConfirm godoc
+// @Summary Confirm subscription payment after Stripe checkout
+// @Description Verify paid checkout session and grant membership when webhook is delayed or missing
+// @Tags client-payment
+// @Accept json
+// @Produce json
+// @Param X-Site-Id header string true "Site ID"
+// @Param req body api.SubscriptionConfirmRequest true "Confirm request with orderId"
+// @Success 200 {object} api.Response "Membership granted or already active"
+// @Router /api/client/payment/subscription/confirm [post]
+func (h *SubscriptionHandler) SubscriptionConfirm(ctx *gin.Context) {
+	userID := ctx.GetString("user_id")
+	if userID == "" {
+		api.HandleErrorWithHttpCode(ctx, http.StatusUnauthorized, common.ErrUnauthorized, nil)
+		return
+	}
+
+	siteID := middleware.GetSiteID(ctx)
+	if siteID == "" {
+		api.HandleErrorWithHttpCode(ctx, http.StatusBadRequest, fmt.Errorf("siteId is required"), nil)
+		return
+	}
+
+	var req api.SubscriptionConfirmRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		api.HandleErrorWithHttpCode(ctx, http.StatusBadRequest, err, nil)
+		return
+	}
+	if req.OrderID == "" {
+		api.HandleErrorWithHttpCode(ctx, http.StatusBadRequest, fmt.Errorf("orderId is required"), nil)
+		return
+	}
+
+	if err := h.stripeService.ConfirmSubscriptionPayment(ctx, userID, siteID, req.OrderID); err != nil {
+		log.Error(ctx, "Failed to confirm subscription payment: "+err.Error())
+		api.HandleError(ctx, err, nil)
+		return
+	}
+
+	api.HandleSuccess(ctx, nil)
 }
 
 // GetUserSubscriptions godoc

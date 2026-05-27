@@ -248,6 +248,11 @@ func (s *siteService) ModifySiteAndSeo(ctx *gin.Context, req *api.SiteInfo) erro
 	} else {
 		site.FacebookPixelID = nil
 	}
+	if req.FacebookCapiAccessToken != nil {
+		site.FacebookCapiAccessToken = req.FacebookCapiAccessToken
+	} else {
+		site.FacebookCapiAccessToken = nil
+	}
 	if req.ThinkingDataAppId != nil {
 		site.ThinkingDataAppId = req.ThinkingDataAppId
 	} else {
@@ -259,8 +264,13 @@ func (s *siteService) ModifySiteAndSeo(ctx *gin.Context, req *api.SiteInfo) erro
 	}
 	if req.Theme != nil {
 		if err := s.siteRepository.UpdateTheme(ctx, req.SiteID, *req.Theme); err != nil {
-			log.Error(ctx, "update site theme failed, err: "+err.Error())
-			return err
+			var mysqlErr *mysql.MySQLError
+			if errors.As(err, &mysqlErr) && mysqlErr.Number == 1054 {
+				log.Warning(ctx, "skip site theme update because sites.theme column is missing")
+			} else {
+				log.Error(ctx, "update site theme failed, err: "+err.Error())
+				return err
+			}
 		}
 	}
 
@@ -399,8 +409,9 @@ func (s *siteService) GetSiteAndSeo(ctx *gin.Context, siteId string) (*api.SiteI
 		TemplateName:      templateName,
 		Status:            site.Status,
 		GoogleAnalyticsID: site.GoogleAnalyticsID,
-		FacebookPixelID:   site.FacebookPixelID,
-		ThinkingDataAppId: site.ThinkingDataAppId,
+		FacebookPixelID:         site.FacebookPixelID,
+		FacebookCapiAccessToken: site.FacebookCapiAccessToken,
+		ThinkingDataAppId:       site.ThinkingDataAppId,
 		Theme:             &theme,
 		Seo: &api.SiteSeo{
 			Title:       seo.Title,
@@ -450,6 +461,7 @@ func (s *siteService) GetSiteUsers(ctx *gin.Context, query *model.UserQuery, pag
 			Nickname:         user.Nickname,
 			Status:           user.Status,
 			PremiumType:      user.PremiumType,
+			OnetimeSub:       user.OnetimeSub,
 			PremiumExpiresAt: preAt,
 			LastLoginAt: func() int64 {
 				if user.LastLoginAt == nil {

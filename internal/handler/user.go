@@ -224,3 +224,33 @@ func (h *UserHandler) ProfileModify(ctx *gin.Context) {
 
 	api.HandleSuccess(ctx, nil)
 }
+
+// SyncMetaClick godoc
+// @Summary Sync Meta fbc/fbp click ids
+// @Description Persist Meta click ids on the user for CAPI Purchase attribution
+// @Tags user
+// @Accept json
+// @Produce json
+// @Param X-Site-Id header string true "Site ID"
+// @Param Authorization header string true "Bearer user token"
+// @Param request body api.MetaClickSyncRequest true "Meta click payload"
+// @Success 200 {object} api.Response
+// @Router /api/user/meta-click/sync [post]
+func (h *UserHandler) SyncMetaClick(ctx *gin.Context) {
+	var req api.MetaClickSyncRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		api.HandleErrorWithHttpCode(ctx, http.StatusBadRequest, err, nil)
+		return
+	}
+	userID := ctx.GetString("user_id")
+	if userID == "" {
+		api.HandleErrorWithHttpCode(ctx, http.StatusUnauthorized, common.ErrUnauthorized, nil)
+		return
+	}
+	if err := h.userService.SyncMetaClick(ctx, userID, &req); err != nil {
+		log.Error(ctx, "sync meta click failed: "+err.Error())
+		api.HandleError(ctx, err, nil)
+		return
+	}
+	api.HandleSuccess(ctx, nil)
+}

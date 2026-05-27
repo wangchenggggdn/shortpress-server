@@ -18,8 +18,9 @@ type Site struct {
 	TemplateID        *string         `gorm:"column:template_id"`
 	I18n              json.RawMessage `gorm:"column:i18n"` // 多语言配置，JSON格式，不做处理，直接存储
 	GoogleAnalyticsID *string         `gorm:"column:google_analytics_id"`
-	FacebookPixelID   *string         `gorm:"column:facebook_pixel_id"`
-	ThinkingDataAppId *string         `gorm:"column:thinking_data_id"`
+	FacebookPixelID          *string `gorm:"column:facebook_pixel_id"`
+	FacebookCapiAccessToken *string `gorm:"column:facebook_capi_access_token"`
+	ThinkingDataAppId      *string `gorm:"column:thinking_data_id"`
 	Theme             int             `gorm:"column:theme;default:0"` // accent palette index for visitor UI
 	SeoTitle          string          `gorm:"-"`
 	SeoDescription    string          `gorm:"-"`

@@ -239,6 +239,8 @@ func registerPaymentRoutes(apiGroup *gin.RouterGroup, paymentHandler *handler.Pa
 	paymentNoAuthGroup := apiGroup.Group("/payment")
 	{
 		paymentNoAuthGroup.POST("callback/stripe", paymentHandler.StripeCallback)
+		paymentNoAuthGroup.GET("callback/stripe/fulfill", paymentHandler.StripeFulfillOrder)
+		paymentNoAuthGroup.POST("callback/stripe/fulfill", paymentHandler.StripeFulfillOrder)
 		paymentNoAuthGroup.POST("callback/paypal", paymentHandler.PayPalCallback)
 	}
 }
@@ -270,6 +272,7 @@ func registerUserRoutes(apiGroup *gin.RouterGroup, userHandler *handler.UserHand
 		{
 			authUserGroup.GET("/profile", userHandler.GetProfile)
 			authUserGroup.POST("/profile-modify", userHandler.ProfileModify) //修改用户信息
+			authUserGroup.POST("/meta-click/sync", userHandler.SyncMetaClick)
 		}
 	}
 }
@@ -345,6 +348,7 @@ func registerClientRoutes(apiGroup *gin.RouterGroup, clientPlayerHandler *handle
 			authedClientPaymentGroup.GET("/coins/videos/transactions", coinsHandler.GetVideoUnlockHistory)
 			authedClientPaymentGroup.POST("/coins/claim-task", coinsHandler.ClaimTaskReward)
 			authedClientPaymentGroup.POST("/subscription/create", subscriptionHandler.SubscriptionCreate)
+			authedClientPaymentGroup.POST("/subscription/confirm", subscriptionHandler.SubscriptionConfirm)
 			authedClientPaymentGroup.GET("/subscription/user/list", subscriptionHandler.GetUserSubscriptions)
 			authedClientPaymentGroup.POST("/subscription/cancel", subscriptionHandler.CancelSubscription)
 		}

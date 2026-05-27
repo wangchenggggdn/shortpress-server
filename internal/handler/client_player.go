@@ -367,22 +367,21 @@ func (h *ClientPlayerHandler) SiteInfo(ctx *gin.Context) {
 			api.HandleErrorWithHttpCode(ctx, http.StatusBadRequest, fmt.Errorf("domain is empty"), nil)
 			return
 		}
-		if types.IsOfficialDomain(host) { //如果是子域名按Path获取
+		var err error
+		site, err = h.clientPlayerService.GetSiteByHost(ctx, host)
+		if err != nil {
+			if err != common.ErrSiteNotFound || !types.IsOfficialDomain(host) {
+				log.Error(ctx, "get site info by host failed, error: "+err.Error())
+				api.HandleError(ctx, err, nil)
+				return
+			}
+
 			log.AddNotice(ctx, "is_official_domain", true)
 			sitePath = types.ExtractSubdomain(host) // Extract subdomain, if needed
-			var err error
 			log.AddNotice(ctx, "host_path", sitePath)
 			site, err = h.clientPlayerService.GetSiteByPath(ctx, sitePath)
 			if err != nil {
 				log.Error(ctx, "get site info failed, error: "+err.Error())
-				api.HandleError(ctx, err, nil)
-				return
-			}
-		} else {
-			var err error
-			site, err = h.clientPlayerService.GetSiteByHost(ctx, host)
-			if err != nil {
-				log.Error(ctx, "get site info by host failed, error: "+err.Error())
 				api.HandleError(ctx, err, nil)
 				return
 			}

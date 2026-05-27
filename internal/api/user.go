@@ -46,6 +46,7 @@ type UserProfileData struct {
 	Nickname         string `json:"nickname"`
 	AvatarURL        string `json:"avatarUrl"`
 	PremiumType      int8   `json:"premiumType"` // 0: free, 1: premium ...
+	OnetimeSub       int8   `json:"onetimeSub"`  // 1: 一次性订阅（非 Stripe 自动续订）
 	PremiumExpiresAt int64  `json:"premiumExpiresAt"`
 	AutoUnlock       bool   `json:"autoUnlock"` // Whether auto-unlock is enabled
 	Status           int8   `json:"status"`
@@ -63,6 +64,7 @@ type UserInfo struct {
 	Nickname         string `json:"nickname" example:"John Doe"`
 	Status           int8   `json:"status" example:"1"`
 	PremiumType      int8   `json:"premiumType" example:"0"`               // 0: free, 1: premium
+	OnetimeSub       int8   `json:"onetimeSub" example:"0"`                // 1: 一次性订阅
 	PremiumExpiresAt int64  `json:"premiumExpiresAt" example:"1609459200"` // Unix timestamp
 	LastLoginAt      int64  `json:"lastLoginAt" example:"1609459200"`
 	CreatedAt        int64  `json:"createdAt" example:"1609459200"`
@@ -75,6 +77,14 @@ type UserListResponseData struct {
 	Page     int         `json:"page" example:"1"`      // Current page number
 	PageSize int         `json:"pageSize" example:"20"` // Page size
 	Items    []*UserInfo `json:"items"`                 // User list
+}
+
+// MetaClickSyncRequest syncs Meta fbc/fbp from the visitor client into the user row.
+type MetaClickSyncRequest struct {
+	Fbc            string `json:"fbc,omitempty"`
+	Fbp            string `json:"fbp,omitempty"`
+	Fbclid         string `json:"fbclid,omitempty"`
+	EventSourceURL string `json:"eventSourceUrl,omitempty"`
 }
 
 // UserProfileModifyRequest represents the request for user profile modification

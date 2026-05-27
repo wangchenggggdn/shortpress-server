@@ -2,6 +2,9 @@ package payment
 
 import (
 	"context"
+	"errors"
+	"time"
+
 	"shortpress-server/internal/model"
 	"shortpress-server/internal/repository/db"
 
@@ -19,6 +22,8 @@ type UserSubscriptionRepository interface {
 	UpdateStatusByProviderSubID(ctx context.Context, subscriptionID string, status int) error
 	UpdatePeriodByProviderSubID(ctx context.Context, subscriptionID string, period *model.UserSubscription) error
 	CountActiveByUserAndSite(ctx context.Context, userID string, siteID string) (int64, error)
+	// GetActiveLegacyStripeRecurringSubscription 当前仍有效的 Stripe 自动续订（sub_ 且未过期）
+	GetActiveLegacyStripeRecurringSubscription(ctx context.Context, userID, siteID string) (*model.UserSubscription, error)
 	GetExpiringSoon(ctx context.Context, endBeforeTime string, limit int) ([]*model.UserSubscription, error)
 }
 
@@ -38,7 +43,28 @@ func (r *userSubscriptionRepository) Create(ctx context.Context, entity interfac
 }
 
 func (r *userSubscriptionRepository) Update(ctx context.Context, entity interface{}) error {
-	return r.DB(ctx).Save(entity).Error
+	sub, ok := entity.(*model.UserSubscription)
+	if !ok {
+		return r.DB(ctx).Save(entity).Error
+	}
+	if sub.SubscriptionID == "" {
+		return errors.New("subscription_id is required for update")
+	}
+	// 表无 GORM 主键字段，不能用 Save，须按 subscription_id 更新
+	return r.DB(ctx).Model(&model.UserSubscription{}).
+		Where("subscription_id = ?", sub.SubscriptionID).
+		Updates(map[string]interface{}{
+			"user_id":                  sub.UserID,
+			"site_id":                  sub.SiteID,
+			"package_id":               sub.PackageID,
+			"provider":                 sub.Provider,
+			"provider_subscription_id": sub.ProviderSubscriptionID,
+			"provider_customer_id":     sub.ProviderCustomerID,
+			"status":                   sub.Status,
+			"current_period_start":     sub.CurrentPeriodStart,
+			"current_period_end":       sub.CurrentPeriodEnd,
+			"cancel_at_period_end":     sub.CancelAtPeriodEnd,
+		}).Error
 }
 
 // GetBySubscriptionID retrieves a subscription by its ID
@@ -135,6 +161,22 @@ func (r *userSubscriptionRepository) CountActiveByUserAndSite(ctx context.Contex
 			userID, siteID, model.SubscriptionStatusActive).
 		Count(&count).Error
 	return count, err
+}
+
+// GetActiveLegacyStripeRecurringSubscription returns an active, in-period Stripe auto-renewing subscription if one exists.
+func (r *userSubscriptionRepository) GetActiveLegacyStripeRecurringSubscription(ctx context.Context, userID, siteID string) (*model.UserSubscription, error) {
+	var subscription model.UserSubscription
+	err := r.DB(ctx).
+		Where("user_id = ? AND site_id = ? AND provider = ? AND provider_subscription_id LIKE ? AND status = ? AND current_period_end > ?",
+			userID, siteID, "stripe", "sub_%", model.SubscriptionStatusActive, time.Now()).
+		First(&subscription).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &subscription, nil
 }
 
 // GetExpiringSoon retrieves subscriptions that expire soon
