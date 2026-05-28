@@ -719,13 +719,20 @@ func (s *stripeService) fulfillCheckoutSessionCompleted(ctx *gin.Context, siteID
 		return nil
 	}
 
-	transaction.Status = model.PaymentStatusSuccess
-	transaction.ProviderPaymentID = session.ID
-
+	var claimed bool
 	err = s.service.Tx().Transaction(ctx, func(ctx context.Context) error {
-		if err := s.paymentTransactionRepo.Update(ctx, transaction); err != nil {
+		// 原子幂等：只有第一个把 pending -> success 的请求，才继续发币/发会员。
+		ok, err := s.paymentTransactionRepo.MarkSuccessIfPending(ctx, transaction.TransactionID, session.ID)
+		if err != nil {
 			return err
 		}
+		if !ok {
+			// 并发 webhook 已被其他请求处理，直接跳过后续业务。
+			return nil
+		}
+		claimed = true
+		transaction.Status = model.PaymentStatusSuccess
+		transaction.ProviderPaymentID = session.ID
 
 		switch transaction.PaymentType {
 		case model.PaymentTypeCoinPackage:
@@ -740,6 +747,9 @@ func (s *stripeService) fulfillCheckoutSessionCompleted(ctx *gin.Context, siteID
 	if err != nil {
 		log.Error(ctx, "Transaction failed: "+err.Error())
 		return err
+	}
+	if !claimed {
+		return nil
 	}
 
 	if s.trackingService != nil {

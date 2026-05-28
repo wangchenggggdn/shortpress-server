@@ -14,6 +14,7 @@ type PaymentTransactionRepository interface {
 	db.BaseOperation
 	GetByTransactionID(ctx context.Context, transactionID string) (*model.PaymentTransaction, error)
 	GetByProviderPaymentID(ctx context.Context, provider, paymentID string) (*model.PaymentTransaction, error)
+	MarkSuccessIfPending(ctx context.Context, transactionID, providerPaymentID string) (bool, error)
 	ListBySiteIDAndTimeRange(ctx context.Context, siteID string, userID string, startTime, endTime time.Time, limit, offset int) ([]*model.PaymentTransactionView, error)
 	CountBySiteIDAndTimeRange(ctx context.Context, siteID string, userID string, startTime, endTime time.Time) (int64, error)
 	GetDailyIncomeStatistics(ctx context.Context, siteID string, startTime, endTime time.Time) ([]*model.DailyIncomeStatistics, error)
@@ -63,6 +64,21 @@ func (r *paymentTransactionRepository) GetByProviderPaymentID(ctx context.Contex
 		return nil, err
 	}
 	return &tx, nil
+}
+
+// MarkSuccessIfPending atomically marks a pending transaction as success.
+// Returns true when current request successfully claims processing ownership.
+func (r *paymentTransactionRepository) MarkSuccessIfPending(ctx context.Context, transactionID, providerPaymentID string) (bool, error) {
+	result := r.DB(ctx).Model(&model.PaymentTransaction{}).
+		Where("transaction_id = ? AND status = ?", transactionID, model.PaymentStatusPending).
+		Updates(map[string]interface{}{
+			"status":              model.PaymentStatusSuccess,
+			"provider_payment_id": providerPaymentID,
+		})
+	if result.Error != nil {
+		return false, result.Error
+	}
+	return result.RowsAffected > 0, nil
 }
 
 // ListBySiteIDAndTimeRange retrieves payment transactions for a site within a time range
