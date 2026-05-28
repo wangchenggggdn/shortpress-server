@@ -1110,27 +1110,31 @@ func (s *stripeService) CreateSubscriptionOrder(ctx *gin.Context, userID string,
 	}
 	s.client.SetAPIKey(config.StripeSecretKey)
 
-	// 当前仍有有效的 Stripe 自动续订（sub_）则禁止重复下单；其余用户（含已过期老订阅）均走一次性 Checkout
-	legacySub, err := s.userSubscriptionRepo.GetActiveLegacyStripeRecurringSubscription(ctx, userID, req.SiteID)
-	if err != nil {
-		return nil, err
-	}
-	if legacySub != nil {
-		stripeActive, stripeErr := s.client.IsSubscriptionActive(legacySub.ProviderSubscriptionID)
-		if stripeErr != nil {
-			s.service.Logger().Warn("Failed to verify legacy Stripe subscription status, blocking new order",
-				zap.Error(stripeErr),
-				zap.String("subscriptionID", legacySub.ProviderSubscriptionID),
-				zap.String("userID", userID),
-			)
-			return nil, errors.New("user already has an active subscription")
-		}
-		if stripeActive {
-			return nil, errors.New("user already has an active subscription")
-		}
-	}
+	// 已恢复为 Stripe 订阅模式：默认创建 recurring checkout（sub_ 自动续订）。
+	// 如后续需要重新启用“一次性购买订阅（one_time）”方案，可恢复下面被注释的代码块。
+	return s.createLegacyRecurringSubscriptionOrder(ctx, userID, req, pkg)
 
-	return s.createOneTimeSubscriptionOrder(ctx, userID, req, pkg)
+	// // 一次性购买订阅（历史临时方案）
+	// // 当前仍有有效的 Stripe 自动续订（sub_）则禁止重复下单；其余用户（含已过期老订阅）走一次性 Checkout
+	// legacySub, err := s.userSubscriptionRepo.GetActiveLegacyStripeRecurringSubscription(ctx, userID, req.SiteID)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// if legacySub != nil {
+	// 	stripeActive, stripeErr := s.client.IsSubscriptionActive(legacySub.ProviderSubscriptionID)
+	// 	if stripeErr != nil {
+	// 		s.service.Logger().Warn("Failed to verify legacy Stripe subscription status, blocking new order",
+	// 			zap.Error(stripeErr),
+	// 			zap.String("subscriptionID", legacySub.ProviderSubscriptionID),
+	// 			zap.String("userID", userID),
+	// 		)
+	// 		return nil, errors.New("user already has an active subscription")
+	// 	}
+	// 	if stripeActive {
+	// 		return nil, errors.New("user already has an active subscription")
+	// 	}
+	// }
+	// return s.createOneTimeSubscriptionOrder(ctx, userID, req, pkg)
 }
 
 // createOneTimeSubscriptionOrder 与购金币相同的一次性 Checkout，每周期由用户主动购买
