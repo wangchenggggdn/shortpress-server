@@ -51,9 +51,12 @@ type PaymentTransactionView struct {
 
 // DailyIncomeStatistics represents daily income statistics from the database
 type DailyIncomeStatistics struct {
-	Date             string `gorm:"column:date"`
-	TotalAmount      int64  `gorm:"column:total_amount"`
-	TransactionCount int    `gorm:"column:transaction_count"`
+	Date               string `gorm:"column:date"`
+	TotalAmount        int64  `gorm:"column:total_amount"`
+	TransactionCount   int    `gorm:"column:transaction_count"`
+	IapAmount          int64  `gorm:"column:iap_amount"`
+	SubscriptionAmount int64  `gorm:"column:subscription_amount"`
+	RenewalAmount      int64  `gorm:"column:renewal_amount"`
 }
 
 func (PaymentTransaction) TableName() string {

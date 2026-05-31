@@ -158,9 +158,12 @@ func (s *analyticsService) GetIncomeStatistics(
 	responseStats := make([]api.DailyIncomeStatistics, 0, len(stats))
 	for _, stat := range stats {
 		responseStats = append(responseStats, api.DailyIncomeStatistics{
-			Date:             stat.Date,
-			TotalAmount:      types.FromCents(stat.TotalAmount),
-			TransactionCount: stat.TransactionCount,
+			Date:               stat.Date,
+			TotalAmount:        types.FromCents(stat.TotalAmount),
+			TransactionCount:   stat.TransactionCount,
+			IapAmount:          types.FromCents(stat.IapAmount),
+			SubscriptionAmount: types.FromCents(stat.SubscriptionAmount),
+			RenewalAmount:      types.FromCents(stat.RenewalAmount),
 		})
 	}
 

@@ -35,9 +35,12 @@ type IncomeStatisticsRequest struct {
 }
 
 type DailyIncomeStatistics struct {
-	Date             string      `json:"date"`             // Date in YYYY-MM-DD format
-	TotalAmount      types.Money `json:"totalAmount"`      // Total income for the day
-	TransactionCount int         `json:"transactionCount"` // Number of successful transactions
+	Date               string      `json:"date"`               // Date in YYYY-MM-DD format
+	TotalAmount        types.Money `json:"totalAmount"`        // Total income for the day
+	TransactionCount   int         `json:"transactionCount"`   // Number of successful transactions
+	IapAmount          types.Money `json:"iapAmount"`          // Coin package / in-app purchase revenue
+	SubscriptionAmount types.Money `json:"subscriptionAmount"` // New subscription revenue
+	RenewalAmount      types.Money `json:"renewalAmount"`      // Subscription renewal revenue (provider_payment_id prefix in_)
 }
 
 type IncomeStatisticsResponse struct {
