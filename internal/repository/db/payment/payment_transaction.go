@@ -149,24 +149,29 @@ func (r *paymentTransactionRepository) CountBySiteIDAndTimeRange(ctx context.Con
 func (r *paymentTransactionRepository) GetDailyIncomeStatistics(ctx context.Context, siteID string, startTime, endTime time.Time) ([]*model.DailyIncomeStatistics, error) {
 	var statistics []*model.DailyIncomeStatistics
 
-	// Renewal = Stripe invoice payments (provider_payment_id starts with "in_").
-	// New subscription = subscription-related orders that are not invoice renewals.
-	isSubscription := fmt.Sprintf(`(related_type = %d OR payment_type = %d)`, model.RelatedTypeSubscription, model.PaymentTypeSubscription)
-	isRenewal := `LEFT(provider_payment_id, 3) = 'in_'`
-	isNewSubscription := fmt.Sprintf(`(%s AND COALESCE(LEFT(provider_payment_id, 3), '') != 'in_')`, isSubscription)
-	isIAP := fmt.Sprintf(`(related_type = %d OR (payment_type = %d AND COALESCE(related_type, 0) != %d))`,
-		model.RelatedTypeCoinPackage, model.PaymentTypeCoinPackage, model.RelatedTypeSubscription)
+	// Renewal: Stripe invoice id on provider_payment_id (must start with "in_").
+	// Use REGEXP '^in_' (not LIKE 'in_%') — SQL LIKE treats "_" as a single-char wildcard.
+	isRenewal := `TRIM(COALESCE(provider_payment_id, '')) REGEXP '^in_'`
+	notRenewal := fmt.Sprintf(`NOT (%s)`, isRenewal)
+	isSubscriptionOrder := fmt.Sprintf(`(
+		related_type = %d OR payment_type = %d
+		OR COALESCE(JSON_UNQUOTE(JSON_EXTRACT(snapshot, '$.interval')), '') IN ('week', 'month', 'year')
+		OR COALESCE(JSON_UNQUOTE(JSON_EXTRACT(snapshot, '$.stripe_subscription_billing')), '') IN ('initial', 'one_time', 'recurring')
+	)`, model.RelatedTypeSubscription, model.PaymentTypeSubscription)
+	isNewSubscription := fmt.Sprintf(`(%s AND %s)`, notRenewal, isSubscriptionOrder)
+	isIAP := fmt.Sprintf(`(%s AND NOT (%s) AND (related_type = %d OR payment_type = %d))`,
+		notRenewal, isSubscriptionOrder, model.RelatedTypeCoinPackage, model.PaymentTypeCoinPackage)
 
 	query := r.DB(ctx).Model(&model.PaymentTransaction{}).
 		Select(fmt.Sprintf(`DATE(created_at) as date,
 			SUM(amount) as total_amount,
 			COUNT(*) as transaction_count,
-			SUM(CASE WHEN %s THEN amount ELSE 0 END) as iap_amount,
+			SUM(CASE WHEN %s THEN amount ELSE 0 END) as renewal_amount,
 			SUM(CASE WHEN %s THEN amount ELSE 0 END) as subscription_amount,
-			SUM(CASE WHEN %s THEN amount ELSE 0 END) as renewal_amount`,
-			isIAP,
+			SUM(CASE WHEN %s THEN amount ELSE 0 END) as iap_amount`,
+			isRenewal,
 			isNewSubscription,
-			isRenewal)).
+			isIAP)).
 		Where("site_id = ? AND status = ?", siteID, model.PaymentStatusSuccess)
 
 	// Add time range conditions
