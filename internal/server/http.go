@@ -347,6 +347,8 @@ func registerClientRoutes(apiGroup *gin.RouterGroup, clientPlayerHandler *handle
 			authedClientPaymentGroup.GET("/coins/transactions", coinsHandler.GetAddCoionsHistory)
 			authedClientPaymentGroup.GET("/coins/videos/transactions", coinsHandler.GetVideoUnlockHistory)
 			authedClientPaymentGroup.POST("/coins/claim-task", coinsHandler.ClaimTaskReward)
+			authedClientPaymentGroup.GET("/coins/wheel-status", coinsHandler.GetWheelStatus)
+			authedClientPaymentGroup.POST("/coins/wheel-spin", coinsHandler.SpinWheel)
 			authedClientPaymentGroup.POST("/subscription/create", subscriptionHandler.SubscriptionCreate)
 			authedClientPaymentGroup.POST("/subscription/confirm", subscriptionHandler.SubscriptionConfirm)
 			authedClientPaymentGroup.GET("/subscription/user/list", subscriptionHandler.GetUserSubscriptions)

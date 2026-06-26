@@ -359,6 +359,46 @@ type ClaimTaskRewardResponse struct {
 	Message string `json:"message,omitempty"` // 提示信息
 }
 
+// WheelPrizeItem defines a wheel segment for display
+type WheelPrizeItem struct {
+	ID    string `json:"id"`
+	Coins int    `json:"coins"`
+}
+
+// WheelStatusResponse defines wheel availability and config
+type WheelStatusResponse struct {
+	Balance           int              `json:"balance"`
+	FreeSpinAvailable bool             `json:"freeSpinAvailable"`
+	NextFreeSpinAt    int64            `json:"nextFreeSpinAt"`
+	PaidCostPerSpin   int              `json:"paidCostPerSpin"`
+	PaidSpinsToday    int              `json:"paidSpinsToday"`
+	PaidDailyCap      int              `json:"paidDailyCap"`
+	FreePrizes        []WheelPrizeItem `json:"freePrizes"`
+	PaidPrizes        []WheelPrizeItem `json:"paidPrizes"`
+}
+
+// WheelSpinRequest defines a wheel spin request
+type WheelSpinRequest struct {
+	Mode string `json:"mode" binding:"required,oneof=free paid"` // free | paid
+}
+
+// WheelSpinResultItem defines a single spin outcome
+type WheelSpinResultItem struct {
+	PrizeID string `json:"prizeId"`
+	Coins   int    `json:"coins"`
+	Index   int    `json:"index"`
+}
+
+// WheelSpinResponse defines wheel spin result
+type WheelSpinResponse struct {
+	Success  bool                  `json:"success"`
+	Mode     string                `json:"mode"`
+	Cost     int                   `json:"cost"`
+	Results  []WheelSpinResultItem `json:"results"`
+	Balance  int                   `json:"balance"`
+	Message  string                `json:"message,omitempty"`
+}
+
 // PurchaseRecord represents a single purchase record in the purchase history
 type PurchaseRecord struct {
 	TransactionID   string      `json:"transactionId"`   // Transaction ID

@@ -18,6 +18,8 @@ const (
 	CoinSourceAdminAdjustment = "admin_adjustment"
 	CoinSourcePluginAdd       = "plugin_add"    // 插件加点
 	CoinSourcePluginDeduct    = "plugin_deduct" // 插件扣点
+	CoinSourceWheelSpin       = "wheel_spin"    // 转盘消耗
+	CoinSourceWheelReward     = "wheel_reward"  // 转盘奖励
 
 	// Related types for coin transactions
 	CoinRelatedTypePayment  = 1
@@ -25,6 +27,7 @@ const (
 	CoinRelatedTypePlaylist = 3
 	CoinRelatedTypeAdminID  = 4
 	CoinRelatedTypePlugin   = 5 // 插件扣点
+	CoinRelatedTypeWheel    = 7 // 转盘
 )
 
 // CoinTransaction represents a coin transaction record

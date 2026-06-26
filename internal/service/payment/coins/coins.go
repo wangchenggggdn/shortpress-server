@@ -58,6 +58,12 @@ type CoinsService interface {
 
 	// ClaimTaskReward allows users to claim rewards for completing tasks
 	ClaimTaskReward(ctx *gin.Context, userID, siteID, taskName string) (*api.ClaimTaskRewardResponse, error)
+
+	// GetWheelStatus returns wheel availability and prize config
+	GetWheelStatus(ctx *gin.Context, userID, siteID string, isVIP bool) (*api.WheelStatusResponse, error)
+
+	// SpinWheel executes a free or paid wheel spin
+	SpinWheel(ctx *gin.Context, userID, siteID string, isVIP bool, mode string) (*api.WheelSpinResponse, error)
 }
 
 type coinsService struct {

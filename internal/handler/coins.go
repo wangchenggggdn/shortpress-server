@@ -390,3 +390,77 @@ func (h *CoinsHandler) ClaimTaskReward(ctx *gin.Context) {
 
 	api.HandleSuccess(ctx, response)
 }
+
+// GetWheelStatus godoc
+// @Summary Get lucky wheel status
+// @Tags client-payment
+// @Produce json
+// @Param X-Site-Id header string true "Site ID"
+// @Success 200 {object} api.Response{data=api.WheelStatusResponse}
+// @Router /api/client/payment/coins/wheel-status [get]
+func (h *CoinsHandler) GetWheelStatus(ctx *gin.Context) {
+	userID := ctx.GetString("user_id")
+	if userID == "" {
+		api.HandleErrorWithHttpCode(ctx, http.StatusUnauthorized, common.ErrUnauthorized, nil)
+		return
+	}
+
+	siteID := middleware.GetSiteID(ctx)
+	if siteID == "" {
+		api.HandleErrorWithHttpCode(ctx, http.StatusBadRequest, fmt.Errorf("siteId is required"), nil)
+		return
+	}
+
+	isVIP := false
+	response, err := h.coinsService.GetWheelStatus(ctx, userID, siteID, isVIP)
+	if err != nil {
+		log.Error(ctx, "Failed to get wheel status: "+err.Error())
+		api.HandleError(ctx, err, nil)
+		return
+	}
+
+	api.HandleSuccess(ctx, response)
+}
+
+// SpinWheel godoc
+// @Summary Spin lucky wheel
+// @Tags client-payment
+// @Accept json
+// @Produce json
+// @Param X-Site-Id header string true "Site ID"
+// @Param request body api.WheelSpinRequest true "Wheel spin request"
+// @Success 200 {object} api.Response{data=api.WheelSpinResponse}
+// @Router /api/client/payment/coins/wheel-spin [post]
+func (h *CoinsHandler) SpinWheel(ctx *gin.Context) {
+	userID := ctx.GetString("user_id")
+	if userID == "" {
+		api.HandleErrorWithHttpCode(ctx, http.StatusUnauthorized, common.ErrUnauthorized, nil)
+		return
+	}
+
+	siteID := middleware.GetSiteID(ctx)
+	if siteID == "" {
+		api.HandleErrorWithHttpCode(ctx, http.StatusBadRequest, fmt.Errorf("siteId is required"), nil)
+		return
+	}
+
+	var req api.WheelSpinRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		api.HandleErrorWithHttpCode(ctx, http.StatusBadRequest, err, nil)
+		return
+	}
+
+	isVIP := false
+	response, err := h.coinsService.SpinWheel(ctx, userID, siteID, isVIP, req.Mode)
+	if err != nil {
+		if err == common.ErrInsufficientCoins {
+			api.HandleSuccess(ctx, response)
+			return
+		}
+		log.Error(ctx, "Failed to spin wheel: "+err.Error())
+		api.HandleError(ctx, err, nil)
+		return
+	}
+
+	api.HandleSuccess(ctx, response)
+}
