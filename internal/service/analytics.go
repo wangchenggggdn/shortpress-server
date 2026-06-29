@@ -3,10 +3,12 @@ package service
 import (
 	"fmt"
 	"shortpress-server/internal/api"
+	"shortpress-server/internal/model"
 	"shortpress-server/internal/repository/db/payment"
 	"shortpress-server/internal/repository/db/user"
 	"shortpress-server/internal/types"
 	"shortpress-server/pkg/log"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -26,6 +28,7 @@ type analyticsService struct {
 	*Service
 	paymentTransactionRepo payment.PaymentTransactionRepository
 	userRepository         user.UserRepository
+	userSubscriptionRepo   payment.UserSubscriptionRepository
 }
 
 // NewAnalyticsService creates a new analytics service
@@ -33,11 +36,13 @@ func NewAnalyticsService(
 	service *Service,
 	paymentTransactionRepo payment.PaymentTransactionRepository,
 	userRepository user.UserRepository,
+	userSubscriptionRepo payment.UserSubscriptionRepository,
 ) AnalyticsService {
 	return &analyticsService{
 		Service:                service,
 		paymentTransactionRepo: paymentTransactionRepo,
 		userRepository:         userRepository,
+		userSubscriptionRepo:   userSubscriptionRepo,
 	}
 }
 
@@ -231,5 +236,49 @@ func (s *analyticsService) GetTransactionByID(ctx *gin.Context, transactionID st
 		CreatedAt:     transaction.CreatedAt.Unix(),
 	}
 
+	if isSubscriptionTransaction(transaction) {
+		response.IsSubscriptionOrder = !isSubscriptionRenewalTransaction(transaction)
+		if transaction.UserID != "" && transaction.SiteID != "" {
+			var userSubscription *model.UserSubscription
+			var subErr error
+			if transaction.RelatedID != "" {
+				userSubscription, subErr = s.userSubscriptionRepo.GetByUserSiteAndPackage(
+					ctx,
+					transaction.UserID,
+					transaction.SiteID,
+					transaction.RelatedID,
+				)
+			} else {
+				userSubscription, subErr = s.userSubscriptionRepo.GetActiveByUserAndSite(
+					ctx,
+					transaction.UserID,
+					transaction.SiteID,
+				)
+			}
+			if subErr != nil {
+				log.Warning(ctx, fmt.Sprintf("Failed to get user subscription for transaction %s: %v", transactionID, subErr))
+			} else if userSubscription != nil &&
+				userSubscription.Status == model.SubscriptionStatusActive &&
+				!userSubscription.CancelAtPeriodEnd {
+				response.SubscriptionID = userSubscription.SubscriptionID
+			}
+		}
+	}
+
 	return response, nil
+}
+
+func isSubscriptionTransaction(transaction *model.PaymentTransaction) bool {
+	if transaction == nil {
+		return false
+	}
+	return transaction.PaymentType == model.PaymentTypeSubscription ||
+		transaction.RelatedType == model.RelatedTypeSubscription
+}
+
+func isSubscriptionRenewalTransaction(transaction *model.PaymentTransaction) bool {
+	if transaction == nil {
+		return false
+	}
+	return strings.HasPrefix(strings.TrimSpace(transaction.ProviderPaymentID), "in_")
 }

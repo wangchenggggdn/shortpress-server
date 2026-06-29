@@ -51,17 +51,19 @@ type IncomeStatisticsResponse struct {
 
 // IncomeTransactionDetailResponse represents detailed information about a payment transaction
 type IncomeTransactionDetailResponse struct {
-	TransactionID string      `json:"transactionId"`
-	Name          string      `json:"name"`
-	UserID        string      `json:"userId"`
-	Email         string      `json:"email"`
-	PayerEmail    string      `json:"payerEmail"`
-	Amount        types.Money `json:"amount"`
-	Currency      string      `json:"currency"`
-	Provider      string      `json:"provider"`
-	PaymentType   int         `json:"paymentType"`
-	Status        int         `json:"status"`
-	RelatedID     string      `json:"relatedId,omitempty"`
-	RelatedType   int         `json:"relatedType,omitempty"`
-	CreatedAt     int64       `json:"createdAt"`
+	TransactionID       string      `json:"transactionId"`
+	Name                string      `json:"name"`
+	UserID              string      `json:"userId"`
+	Email               string      `json:"email"`
+	PayerEmail          string      `json:"payerEmail"`
+	Amount              types.Money `json:"amount"`
+	Currency            string      `json:"currency"`
+	Provider            string      `json:"provider"`
+	PaymentType         int         `json:"paymentType"`
+	Status              int         `json:"status"`
+	RelatedID           string      `json:"relatedId,omitempty"`
+	RelatedType         int         `json:"relatedType,omitempty"`
+	CreatedAt           int64       `json:"createdAt"`
+	IsSubscriptionOrder bool        `json:"isSubscriptionOrder"`
+	SubscriptionID      string      `json:"subscriptionId,omitempty"`
 }

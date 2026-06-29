@@ -433,6 +433,63 @@ func (h *SubscriptionHandler) CancelSubscription(ctx *gin.Context) {
 	api.HandleSuccess(ctx, nil)
 }
 
+// CancelCustomerSubscription godoc
+// @Summary Cancel a customer's subscription
+// @Description Allow creators to cancel an active user subscription from the admin panel
+// @Tags payment
+// @Accept json
+// @Produce json
+// @Param req body api.CancelCustomerSubscriptionRequest true "Cancel customer subscription request"
+// @Success 200 {object} api.Response "Return success response"
+// @Router /api/payment/customers/subscription/cancel [post]
+func (h *SubscriptionHandler) CancelCustomerSubscription(ctx *gin.Context) {
+	creatorID := ctx.GetString("creator_id")
+	if creatorID == "" {
+		api.HandleErrorWithHttpCode(ctx, http.StatusUnauthorized, common.ErrUnauthorized, nil)
+		return
+	}
+
+	var req api.CancelCustomerSubscriptionRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		api.HandleErrorWithHttpCode(ctx, http.StatusBadRequest, err, nil)
+		return
+	}
+
+	subscription, err := h.subscriptionService.GetUserSubscription(ctx, req.SubscriptionID)
+	if err != nil {
+		log.Error(ctx, fmt.Sprintf("Failed to get subscription %s: %v", req.SubscriptionID, err))
+		api.HandleErrorWithHttpCode(ctx, http.StatusNotFound, fmt.Errorf("subscription not found"), nil)
+		return
+	}
+	if subscription == nil {
+		api.HandleErrorWithHttpCode(ctx, http.StatusNotFound, fmt.Errorf("subscription not found"), nil)
+		return
+	}
+	if subscription.SiteID != req.SiteID {
+		api.HandleErrorWithHttpCode(ctx, http.StatusForbidden, fmt.Errorf("subscription does not belong to site"), nil)
+		return
+	}
+
+	var cancelErr error
+	switch subscription.Provider {
+	case "stripe":
+		cancelErr = h.stripeService.CancelSubscription(ctx, subscription.UserID, req.SubscriptionID, false)
+	case "paypal":
+		cancelErr = h.paypalService.CancelSubscription(ctx, subscription.UserID, req.SubscriptionID, false)
+	default:
+		api.HandleErrorWithHttpCode(ctx, http.StatusBadRequest, fmt.Errorf("unsupported payment provider: %s", subscription.Provider), nil)
+		return
+	}
+
+	if cancelErr != nil {
+		log.Error(ctx, fmt.Sprintf("Failed to cancel customer subscription %s: %v", req.SubscriptionID, cancelErr))
+		api.HandleError(ctx, cancelErr, nil)
+		return
+	}
+
+	api.HandleSuccess(ctx, nil)
+}
+
 // Helper method to parse int query parameters
 func (h *SubscriptionHandler) parseQueryInt(value string, defaultValue int) (int, error) {
 	if value == "" {

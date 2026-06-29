@@ -306,6 +306,12 @@ type SubscriptionCancelRequest struct {
 	CancelAtPeriodEnd bool   `json:"cancelAtPeriodEnd"`                 // If true, cancels at the end of the current period; if false, cancels immediately //todo
 }
 
+// CancelCustomerSubscriptionRequest represents the request for a creator to cancel a user's subscription
+type CancelCustomerSubscriptionRequest struct {
+	SiteID         string `json:"siteId" binding:"required"`
+	SubscriptionID string `json:"subscriptionId" binding:"required"`
+}
+
 // Internal API for service-to-service communication
 
 // InternalAddCoinsRequest defines request for adding coins (treated as coin package purchase)

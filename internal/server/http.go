@@ -234,6 +234,7 @@ func registerPaymentRoutes(apiGroup *gin.RouterGroup, paymentHandler *handler.Pa
 		paymentGroup.GET("/customers/coins/transactions", paymentHandler.CustomerTransactionHistory)
 		paymentGroup.GET("/customers/coins/videos/transactions", paymentHandler.CustomerVideoUnlockHistory)
 		paymentGroup.GET("/customers/coins/balance", coinsHandler.GetCustomerCoinsBalance)
+		paymentGroup.POST("/customers/subscription/cancel", subscriptionHandler.CancelCustomerSubscription)
 	}
 	// Payment callback interface (no auth)
 	paymentNoAuthGroup := apiGroup.Group("/payment")

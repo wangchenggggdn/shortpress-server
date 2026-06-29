@@ -16,6 +16,7 @@ type UserSubscriptionRepository interface {
 	db.BaseOperation
 	GetBySubscriptionID(ctx context.Context, subscriptionID string) (*model.UserSubscription, error)
 	GetByUserID(ctx context.Context, userID string, siteID string) ([]*model.UserSubscription, error)
+	GetByUserSiteAndPackage(ctx context.Context, userID, siteID, packageID string) (*model.UserSubscription, error)
 	GetActiveByUserAndSite(ctx context.Context, userID, siteID string) (*model.UserSubscription, error)
 	GetByProviderSubscriptionID(ctx context.Context, provider, providerSubscriptionID string) (*model.UserSubscription, error)
 	ListByUserID(ctx context.Context, userID string, status int, cancelAtPeriodEnd int) ([]*model.UserSubscription, error)
@@ -88,6 +89,22 @@ func (r *userSubscriptionRepository) GetByUserID(ctx context.Context, userID str
 		return nil, err
 	}
 	return subscriptions, nil
+}
+
+// GetByUserSiteAndPackage retrieves the latest subscription for a user, site, and package
+func (r *userSubscriptionRepository) GetByUserSiteAndPackage(ctx context.Context, userID, siteID, packageID string) (*model.UserSubscription, error) {
+	var subscription model.UserSubscription
+	err := r.DB(ctx).
+		Where("user_id = ? AND site_id = ? AND package_id = ?", userID, siteID, packageID).
+		Order("created_at DESC").
+		First(&subscription).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &subscription, nil
 }
 
 // GetActiveByUserAndSite retrieves active subscriptions for a user in a specific site
