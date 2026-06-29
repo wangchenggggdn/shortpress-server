@@ -110,7 +110,8 @@ func (s *analyticsService) GetPaymentTransactions(
 		responseTransactions = append(responseTransactions, &api.IncomeTransactionItem{
 			TransactionID: tx.TransactionID,
 			Name:          name,
-			Email:         tx.Email, //如果有关联查询， 可能会有变化？同一个账号可能会有改邮箱的需求么？
+			Email:         tx.Email,
+			PayerEmail:    tx.PayerEmail,
 			Amount:        types.FromCents(tx.Amount),
 			Provider:      tx.Provider,
 			Description:   tx.ErrorMessage,
@@ -191,11 +192,9 @@ func (s *analyticsService) GetTransactionByID(ctx *gin.Context, transactionID st
 		return nil, nil // Not found, but not an error
 	}
 
-	// Get user information if needed
+	// Get user account email
 	var email string
-	if transaction.PayerEmail != "" {
-		email = transaction.PayerEmail
-	} else if transaction.UserID != "" {
+	if transaction.UserID != "" {
 		user, err := s.userRepository.GetByUserID(ctx, transaction.UserID)
 		if err == nil && user != nil {
 			email = user.Email
@@ -214,6 +213,7 @@ func (s *analyticsService) GetTransactionByID(ctx *gin.Context, transactionID st
 		Name:          name,
 		UserID:        transaction.UserID,
 		Email:         email,
+		PayerEmail:    transaction.PayerEmail,
 		Amount:        types.FromCents(transaction.Amount),
 		Currency:      transaction.Currency,
 		Provider:      transaction.Provider,

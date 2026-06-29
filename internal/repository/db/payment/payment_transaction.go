@@ -91,7 +91,7 @@ func (r *paymentTransactionRepository) ListBySiteIDAndTimeRange(ctx context.Cont
 	var transactions []*model.PaymentTransactionView
 
 	query := r.DB(ctx).Table("payment_transactions").Select(
-		"payment_transactions.*, COALESCE(NULLIF(payment_transactions.payer_email, ''), users.email) AS email",
+		"payment_transactions.*, users.email AS email",
 	).
 		Joins("LEFT JOIN users ON payment_transactions.user_id = users.user_id").
 		Where("payment_transactions.site_id = ?", siteID)
