@@ -22,6 +22,7 @@ type PaymentTransactionRepository interface {
 	GetUserTotalAmount(ctx context.Context, userID string, siteID string, startTime, endTime time.Time) (int64, error)
 	ListUserPurchases(ctx context.Context, userID string, siteID string, page, pageSize int) ([]*model.PaymentTransaction, int64, error)
 	HasUserPurchased(ctx context.Context, userID string, siteID string) (bool, error)
+	GetUserIDByPayerEmail(ctx context.Context, siteID, payerEmail string) (string, error)
 }
 
 type paymentTransactionRepository struct {
@@ -268,4 +269,22 @@ func (r *paymentTransactionRepository) HasUserPurchased(ctx context.Context, use
 		return false, err
 	}
 	return count > 0, nil
+}
+
+// GetUserIDByPayerEmail finds the most recent user who paid with the given checkout email.
+func (r *paymentTransactionRepository) GetUserIDByPayerEmail(ctx context.Context, siteID, payerEmail string) (string, error) {
+	if payerEmail == "" {
+		return "", nil
+	}
+	var userID string
+	err := r.DB(ctx).Model(&model.PaymentTransaction{}).
+		Select("user_id").
+		Where("site_id = ? AND payer_email = ? AND status = ?", siteID, payerEmail, model.PaymentStatusSuccess).
+		Order("created_at DESC").
+		Limit(1).
+		Scan(&userID).Error
+	if err != nil {
+		return "", err
+	}
+	return userID, nil
 }

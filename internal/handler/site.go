@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -520,41 +521,25 @@ func (h *SiteHandler) UserInfo(ctx *gin.Context) {
 		return
 	}
 
-	//email := ctx.Query("email")
-	//if email == "" {
-	//	api.HandleErrorWithHttpCode(ctx, http.StatusBadRequest, fmt.Errorf("email is required"), nil)
-	//	return
-	//}
-
-	userID := ctx.Query("userId")
-	if userID == "" {
-		api.HandleErrorWithHttpCode(ctx, http.StatusBadRequest, fmt.Errorf("userId is required"), nil)
+	email := strings.TrimSpace(ctx.Query("email"))
+	userID := strings.TrimSpace(ctx.Query("userId"))
+	if userID == "" && email == "" {
+		api.HandleErrorWithHttpCode(ctx, http.StatusBadRequest, fmt.Errorf("userId or email is required"), nil)
 		return
 	}
 
-	// 3. Create query structure with the email search term
-	query := &model.UserQuery{
-		SiteID: siteID,
-		UserID: userID,
-		Status: -1, // Get user regardless of status
-	}
-
-	// 4. Call service to get user information (limit to 1 result)
-	users, _, err := h.siteService.GetSiteUsers(ctx, query, 1, 1, 1) // Page 1, size 1, sort by created time desc
+	userInfo, err := h.siteService.GetSiteUserInfo(ctx, siteID, userID, email)
 	if err != nil {
+		if errors.Is(err, common.ErrUserNotFound) {
+			api.HandleError(ctx, common.ErrUserNotFound, nil)
+			return
+		}
 		log.Error(ctx, "get user info failed: "+err.Error())
 		api.HandleError(ctx, err, nil)
 		return
 	}
 
-	// 5. Check if user was found
-	if len(users) == 0 {
-		api.HandleError(ctx, common.ErrUserNotFound, nil)
-		return
-	}
-
-	// 6. Return user info
-	api.HandleSuccess(ctx, users[0])
+	api.HandleSuccess(ctx, userInfo)
 }
 
 // UserChangeStatus godoc

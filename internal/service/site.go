@@ -33,6 +33,7 @@ type SiteService interface {
 	AddPlaylists(ctx *gin.Context, siteID string, playlistIDs []string) error
 	RemovePlaylists(ctx *gin.Context, siteID string, playlistIDs []string) error
 	GetSiteUsers(ctx *gin.Context, query *model.UserQuery, page, pageSize, sortType int) ([]*api.UserInfo, int64, error)
+	GetSiteUserInfo(ctx *gin.Context, siteID, userID, email string) (*api.UserInfo, error)
 	ChangeUserStatus(ctx *gin.Context, siteID string, email string, status int8) error
 	PathExists(ctx *gin.Context, path string) (bool, error)
 }
@@ -46,6 +47,7 @@ func NewSiteService(
 	playlistRepository playlist.PlaylistRepository,
 	userRepository user.UserRepository,
 	userCoinsRepository payment.UserCoinsRepository,
+	paymentTransactionRepo payment.PaymentTransactionRepository,
 	siteBuilderDataRepository site.SiteBuilderDataRepository,
 	sitePageTemplateRepository site.SitePageTemplateRepository,
 	blacklistChecker *blacklist.Blacklist,
@@ -60,6 +62,7 @@ func NewSiteService(
 		creatorSiteRepository:      creatorSiteRepository,
 		playlistRepository:         playlistRepository,
 		userCoinsRepository:        userCoinsRepository,
+		paymentTransactionRepo:     paymentTransactionRepo,
 		siteBuilderDataRepository:  siteBuilderDataRepository,
 		sitePageTemplateRepository: sitePageTemplateRepository,
 		blacklistChecker:           blacklistChecker,
@@ -75,6 +78,7 @@ type siteService struct {
 	playlistRepository         playlist.PlaylistRepository
 	userRepository             user.UserRepository
 	userCoinsRepository        payment.UserCoinsRepository
+	paymentTransactionRepo     payment.PaymentTransactionRepository
 	siteBuilderDataRepository  site.SiteBuilderDataRepository
 	sitePageTemplateRepository site.SitePageTemplateRepository
 	blacklistChecker           *blacklist.Blacklist
@@ -475,6 +479,41 @@ func (s *siteService) GetSiteUsers(ctx *gin.Context, query *model.UserQuery, pag
 	}
 
 	return userInfos, total, nil
+}
+
+// GetSiteUserInfo returns a single user by user ID or account email within a site.
+func (s *siteService) GetSiteUserInfo(ctx *gin.Context, siteID, userID, email string) (*api.UserInfo, error) {
+	resolvedUserID := userID
+	if resolvedUserID == "" {
+		user, err := s.userRepository.GetByEmailAndSiteID(ctx, email, siteID)
+		if err != nil {
+			return nil, err
+		}
+		if user != nil {
+			resolvedUserID = user.UserID
+		} else {
+			resolvedUserID, err = s.paymentTransactionRepo.GetUserIDByPayerEmail(ctx, siteID, email)
+			if err != nil {
+				return nil, err
+			}
+			if resolvedUserID == "" {
+				return nil, common.ErrUserNotFound
+			}
+		}
+	}
+
+	users, _, err := s.GetSiteUsers(ctx, &model.UserQuery{
+		SiteID: siteID,
+		UserID: resolvedUserID,
+		Status: -1,
+	}, 1, 1, 1)
+	if err != nil {
+		return nil, err
+	}
+	if len(users) == 0 {
+		return nil, common.ErrUserNotFound
+	}
+	return users[0], nil
 }
 
 // ChangeUserStatus changes a user's status or deletes them if status is UserStatusDeleted

@@ -62,13 +62,14 @@ func NewWire(viperViper *viper.Viper, logger *log.Logger) (*app.App, func(), err
 	sitePlaylistsRepository := site.NewSitePlaylistRepository(repository)
 	userRepository := user.NewUserRepository(repository)
 	userCoinsRepository := payment.NewUserCoinsRepository(repository)
+	paymentTransactionRepository := payment.NewPaymentTransactionRepository(repository)
 	siteBuilderDataRepository := site.NewSiteBuilderDataRepository(repository)
 	sitePageTemplateRepository := site.NewSitePageTemplateRepository(repository)
 	blacklistBlacklist, err := blacklist.NewBlacklist(viperViper)
 	if err != nil {
 		return nil, nil, err
 	}
-	siteService := service.NewSiteService(serviceService, siteRepository, siteSeoRepository, sitePlaylistsRepository, creatorSiteRepository, playlistRepository, userRepository, userCoinsRepository, siteBuilderDataRepository, sitePageTemplateRepository, blacklistBlacklist)
+	siteService := service.NewSiteService(serviceService, siteRepository, siteSeoRepository, sitePlaylistsRepository, creatorSiteRepository, playlistRepository, userRepository, userCoinsRepository, paymentTransactionRepository, siteBuilderDataRepository, sitePageTemplateRepository, blacklistBlacklist)
 	siteHandler := handler.NewSiteHandler(handlerHandler, siteService)
 	sitePageConfigRepository := site.NewSitePageConfigRepository(repository)
 	sitePageConfigService := service.NewSitePageConfigService(serviceService, sitePageConfigRepository)
@@ -95,7 +96,6 @@ func NewWire(viperViper *viper.Viper, logger *log.Logger) (*app.App, func(), err
 	adsHandler := handler.NewAdsHandler(handlerHandler, adsService)
 	userProfileRepository := user.NewUserProfileRepository(repository)
 	userAuthRepository := user.NewUserAuthRepository(repository)
-	paymentTransactionRepository := payment.NewPaymentTransactionRepository(repository)
 	userService := service.NewUserService(serviceService, userRepository, userProfileRepository, userAuthRepository, siteRepository, userCoinsRepository, paymentTransactionRepository)
 	userHandler := handler.NewUserHandler(handlerHandler, userService)
 	stripeClient := stripe.NewClient()
