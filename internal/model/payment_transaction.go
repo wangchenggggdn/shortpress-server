@@ -38,6 +38,7 @@ type PaymentTransaction struct {
 	RelatedType       int     `gorm:"column:related_type"`       // 1: subscription package, 2: coin package, 3: single purchase
 	Snapshot          JSONMap `gorm:"column:snapshot;type:json"` // Store package info at time of purchase
 	RefundAmount      *int64  `gorm:"column:refund_amount"`
+	PayerEmail        string  `gorm:"column:payer_email"` // Email entered on Stripe/PayPal checkout
 	ErrorMessage      string  `gorm:"column:error_message"`
 	// StripeCustomerID string    `gorm:"column:stripe_customer_id"`
 	CreatedAt time.Time `gorm:"column:created_at;autoCreateTime"`

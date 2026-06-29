@@ -13,6 +13,7 @@ import (
 	"shortpress-server/internal/service"
 	"shortpress-server/internal/service/analytics"
 	"shortpress-server/internal/service/payment/coins"
+	payutil "shortpress-server/internal/service/payment"
 	"shortpress-server/internal/types"
 
 	peymentRep "shortpress-server/internal/repository/db/payment"
@@ -765,6 +766,9 @@ func (s *paypalService) handlePaymentCompleted(ctx *gin.Context, event map[strin
 	// Update transaction status
 	transaction.Status = model.PaymentStatusSuccess
 	transaction.ProviderPaymentID = customID
+	if payerEmail := payutil.PayPalPayerEmail(resource); payerEmail != "" {
+		transaction.PayerEmail = payerEmail
+	}
 
 	err = s.paymentTransactionRepo.Update(ctx, transaction)
 	if err != nil {
@@ -1318,6 +1322,9 @@ func (s *paypalService) handleSubscriptionActivated(ctx *gin.Context, event map[
 			// Update transaction status
 			transaction.Status = model.PaymentStatusSuccess
 			transaction.ProviderPaymentID = subscriptionID
+			if payerEmail := payutil.PayPalPayerEmail(resource); payerEmail != "" {
+				transaction.PayerEmail = payerEmail
+			}
 
 			err = s.paymentTransactionRepo.Update(ctx, transaction)
 			if err != nil {
@@ -1369,6 +1376,9 @@ func (s *paypalService) handleSubscriptionCreated(ctx *gin.Context, event map[st
 			// Update transaction status
 			transaction.Status = model.PaymentStatusSuccess
 			transaction.ProviderPaymentID = subscriptionID
+			if payerEmail := payutil.PayPalPayerEmail(resource); payerEmail != "" {
+				transaction.PayerEmail = payerEmail
+			}
 
 			err = s.paymentTransactionRepo.Update(ctx, transaction)
 			if err != nil {

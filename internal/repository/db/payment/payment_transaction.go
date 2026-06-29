@@ -15,7 +15,7 @@ type PaymentTransactionRepository interface {
 	db.BaseOperation
 	GetByTransactionID(ctx context.Context, transactionID string) (*model.PaymentTransaction, error)
 	GetByProviderPaymentID(ctx context.Context, provider, paymentID string) (*model.PaymentTransaction, error)
-	MarkSuccessIfPending(ctx context.Context, transactionID, providerPaymentID string) (bool, error)
+	MarkSuccessIfPending(ctx context.Context, transactionID, providerPaymentID, payerEmail string) (bool, error)
 	ListBySiteIDAndTimeRange(ctx context.Context, siteID string, userID string, startTime, endTime time.Time, limit, offset int) ([]*model.PaymentTransactionView, error)
 	CountBySiteIDAndTimeRange(ctx context.Context, siteID string, userID string, startTime, endTime time.Time) (int64, error)
 	GetDailyIncomeStatistics(ctx context.Context, siteID string, startTime, endTime time.Time) ([]*model.DailyIncomeStatistics, error)
@@ -69,13 +69,17 @@ func (r *paymentTransactionRepository) GetByProviderPaymentID(ctx context.Contex
 
 // MarkSuccessIfPending atomically marks a pending transaction as success.
 // Returns true when current request successfully claims processing ownership.
-func (r *paymentTransactionRepository) MarkSuccessIfPending(ctx context.Context, transactionID, providerPaymentID string) (bool, error) {
+func (r *paymentTransactionRepository) MarkSuccessIfPending(ctx context.Context, transactionID, providerPaymentID, payerEmail string) (bool, error) {
+	updates := map[string]interface{}{
+		"status":              model.PaymentStatusSuccess,
+		"provider_payment_id": providerPaymentID,
+	}
+	if payerEmail != "" {
+		updates["payer_email"] = payerEmail
+	}
 	result := r.DB(ctx).Model(&model.PaymentTransaction{}).
 		Where("transaction_id = ? AND status = ?", transactionID, model.PaymentStatusPending).
-		Updates(map[string]interface{}{
-			"status":              model.PaymentStatusSuccess,
-			"provider_payment_id": providerPaymentID,
-		})
+		Updates(updates)
 	if result.Error != nil {
 		return false, result.Error
 	}
@@ -86,7 +90,9 @@ func (r *paymentTransactionRepository) MarkSuccessIfPending(ctx context.Context,
 func (r *paymentTransactionRepository) ListBySiteIDAndTimeRange(ctx context.Context, siteID string, userID string, startTime, endTime time.Time, limit, offset int) ([]*model.PaymentTransactionView, error) {
 	var transactions []*model.PaymentTransactionView
 
-	query := r.DB(ctx).Table("payment_transactions").Select("payment_transactions.*, users.email AS email").
+	query := r.DB(ctx).Table("payment_transactions").Select(
+		"payment_transactions.*, COALESCE(NULLIF(payment_transactions.payer_email, ''), users.email) AS email",
+	).
 		Joins("LEFT JOIN users ON payment_transactions.user_id = users.user_id").
 		Where("payment_transactions.site_id = ?", siteID)
 

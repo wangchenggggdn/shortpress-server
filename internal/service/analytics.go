@@ -193,7 +193,9 @@ func (s *analyticsService) GetTransactionByID(ctx *gin.Context, transactionID st
 
 	// Get user information if needed
 	var email string
-	if transaction.UserID != "" {
+	if transaction.PayerEmail != "" {
+		email = transaction.PayerEmail
+	} else if transaction.UserID != "" {
 		user, err := s.userRepository.GetByUserID(ctx, transaction.UserID)
 		if err == nil && user != nil {
 			email = user.Email

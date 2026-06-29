@@ -13,6 +13,7 @@ import (
 	"shortpress-server/internal/service"
 	"shortpress-server/internal/service/analytics"
 	"shortpress-server/internal/service/payment/coins"
+	payutil "shortpress-server/internal/service/payment"
 	"shortpress-server/internal/types"
 	"shortpress-server/pkg/log"
 
@@ -706,6 +707,8 @@ func (s *stripeService) fulfillCheckoutSessionCompleted(ctx *gin.Context, siteID
 	}
 	siteID = transaction.SiteID
 
+	payerEmail := payutil.StripeCheckoutPayerEmail(session)
+
 	if transaction.Status == model.PaymentStatusSuccess {
 		if transaction.PaymentType == model.PaymentTypeSubscription &&
 			isOneTimeSubscriptionCheckout(transaction, stripeSubscriptionIDFromSession(session)) &&
@@ -716,13 +719,19 @@ func (s *stripeService) fulfillCheckoutSessionCompleted(ctx *gin.Context, siteID
 				return s.processSubscriptionPayment(ctx, subid, transaction)
 			})
 		}
+		if payerEmail != "" && transaction.PayerEmail == "" {
+			transaction.PayerEmail = payerEmail
+			if err := s.paymentTransactionRepo.Update(ctx, transaction); err != nil {
+				log.Warning(ctx, "failed to backfill payer email: "+err.Error())
+			}
+		}
 		return nil
 	}
 
 	var claimed bool
 	err = s.service.Tx().Transaction(ctx, func(ctx context.Context) error {
 		// 原子幂等：只有第一个把 pending -> success 的请求，才继续发币/发会员。
-		ok, err := s.paymentTransactionRepo.MarkSuccessIfPending(ctx, transaction.TransactionID, session.ID)
+		ok, err := s.paymentTransactionRepo.MarkSuccessIfPending(ctx, transaction.TransactionID, session.ID, payerEmail)
 		if err != nil {
 			return err
 		}
@@ -733,6 +742,9 @@ func (s *stripeService) fulfillCheckoutSessionCompleted(ctx *gin.Context, siteID
 		claimed = true
 		transaction.Status = model.PaymentStatusSuccess
 		transaction.ProviderPaymentID = session.ID
+		if payerEmail != "" {
+			transaction.PayerEmail = payerEmail
+		}
 
 		switch transaction.PaymentType {
 		case model.PaymentTypeCoinPackage:
@@ -1800,6 +1812,7 @@ func (s *stripeService) handleInvoicePaid(ctx *gin.Context, siteID string, event
 		Status:            model.PaymentStatusSuccess,
 		RelatedID:         pkg.PackageID,
 		RelatedType:       model.RelatedTypeSubscription,
+		PayerEmail:        payutil.StripeInvoicePayerEmail(&invoice),
 		Snapshot:          snapshot,
 	}
 
