@@ -1,6 +1,5 @@
 ARG REGISTRY=docker.io
 FROM ${REGISTRY}/golang:1.24-alpine AS builder
-RUN set -eux && sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories
 
 WORKDIR /app
 
@@ -15,13 +14,10 @@ RUN mkdir -p /app/bin/
 RUN export GOPROXY=https://goproxy.cn,direct && go build -o ./bin/shortpress-server ./cmd/server/main.go
 RUN mv config /app/bin/
 
-FROM ${REGISTRY}/alpine:3.16
-RUN set -eux && sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories
+FROM ${REGISTRY}/alpine:3.23
 
-RUN apk add tzdata && cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
-    && echo "Asia/Shanghai" > /etc/timezone \
-    && apk del tzdata \
-    && apk add ffmpeg
+ENV TZ=Asia/Shanghai
+RUN apk add --no-cache tzdata ffmpeg
 
 ARG APP_ENV
 ENV APP_ENV=${APP_ENV}
