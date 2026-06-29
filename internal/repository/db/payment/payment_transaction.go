@@ -16,8 +16,8 @@ type PaymentTransactionRepository interface {
 	GetByTransactionID(ctx context.Context, transactionID string) (*model.PaymentTransaction, error)
 	GetByProviderPaymentID(ctx context.Context, provider, paymentID string) (*model.PaymentTransaction, error)
 	MarkSuccessIfPending(ctx context.Context, transactionID, providerPaymentID, payerEmail string) (bool, error)
-	ListBySiteIDAndTimeRange(ctx context.Context, siteID string, userID string, startTime, endTime time.Time, limit, offset int) ([]*model.PaymentTransactionView, error)
-	CountBySiteIDAndTimeRange(ctx context.Context, siteID string, userID string, startTime, endTime time.Time) (int64, error)
+	ListBySiteIDAndTimeRange(ctx context.Context, siteID string, userID string, emailSearch string, startTime, endTime time.Time, limit, offset int) ([]*model.PaymentTransactionView, error)
+	CountBySiteIDAndTimeRange(ctx context.Context, siteID string, userID string, emailSearch string, startTime, endTime time.Time) (int64, error)
 	GetDailyIncomeStatistics(ctx context.Context, siteID string, startTime, endTime time.Time) ([]*model.DailyIncomeStatistics, error)
 	GetUserTotalAmount(ctx context.Context, userID string, siteID string, startTime, endTime time.Time) (int64, error)
 	ListUserPurchases(ctx context.Context, userID string, siteID string, page, pageSize int) ([]*model.PaymentTransaction, int64, error)
@@ -88,7 +88,7 @@ func (r *paymentTransactionRepository) MarkSuccessIfPending(ctx context.Context,
 }
 
 // ListBySiteIDAndTimeRange retrieves payment transactions for a site within a time range
-func (r *paymentTransactionRepository) ListBySiteIDAndTimeRange(ctx context.Context, siteID string, userID string, startTime, endTime time.Time, limit, offset int) ([]*model.PaymentTransactionView, error) {
+func (r *paymentTransactionRepository) ListBySiteIDAndTimeRange(ctx context.Context, siteID string, userID string, emailSearch string, startTime, endTime time.Time, limit, offset int) ([]*model.PaymentTransactionView, error) {
 	var transactions []*model.PaymentTransactionView
 
 	query := r.DB(ctx).Table("payment_transactions").Select(
@@ -99,6 +99,9 @@ func (r *paymentTransactionRepository) ListBySiteIDAndTimeRange(ctx context.Cont
 
 	if userID != "" {
 		query = query.Where("payment_transactions.user_id = ?", userID)
+	} else if emailSearch != "" {
+		pattern := "%" + emailSearch + "%"
+		query = query.Where("(users.email LIKE ? OR payment_transactions.payer_email LIKE ?)", pattern, pattern)
 	}
 
 	// Add time range conditions
@@ -131,22 +134,27 @@ func (r *paymentTransactionRepository) ListBySiteIDAndTimeRange(ctx context.Cont
 }
 
 // CountBySiteIDAndTimeRange counts payment transactions for a site within a time range
-func (r *paymentTransactionRepository) CountBySiteIDAndTimeRange(ctx context.Context, siteID string, userID string, startTime, endTime time.Time) (int64, error) {
+func (r *paymentTransactionRepository) CountBySiteIDAndTimeRange(ctx context.Context, siteID string, userID string, emailSearch string, startTime, endTime time.Time) (int64, error) {
 	var count int64
-	query := r.DB(ctx).Model(&model.PaymentTransaction{}).Where("site_id = ?", siteID)
+	query := r.DB(ctx).Table("payment_transactions").
+		Joins("LEFT JOIN users ON payment_transactions.user_id = users.user_id").
+		Where("payment_transactions.site_id = ?", siteID)
 
 	if userID != "" {
-		query = query.Where("user_id = ?", userID)
+		query = query.Where("payment_transactions.user_id = ?", userID)
+	} else if emailSearch != "" {
+		pattern := "%" + emailSearch + "%"
+		query = query.Where("(users.email LIKE ? OR payment_transactions.payer_email LIKE ?)", pattern, pattern)
 	}
 	// Add time range conditions
 	if !startTime.IsZero() {
-		query = query.Where("created_at >= ?", startTime)
+		query = query.Where("payment_transactions.created_at >= ?", startTime)
 	}
 	if !endTime.IsZero() {
-		query = query.Where("created_at <= ?", endTime)
+		query = query.Where("payment_transactions.created_at <= ?", endTime)
 	}
 
-	query = query.Where("status = ?", model.PaymentStatusSuccess)
+	query = query.Where("payment_transactions.status = ?", model.PaymentStatusSuccess)
 
 	err := query.Count(&count).Error
 	return count, err

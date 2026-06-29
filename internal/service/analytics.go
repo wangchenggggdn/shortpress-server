@@ -63,24 +63,9 @@ func (s *analyticsService) GetPaymentTransactions(
 	log.AddNotice(ctx, "filter_user_email", userEmail)
 
 	filterUserID := userID
+	emailSearch := ""
 	if filterUserID == "" && userEmail != "" {
-		// Get user ID by email
-		user, err := s.userRepository.GetByEmailAndSiteID(ctx, userEmail, siteID)
-		if err != nil {
-			log.Error(ctx, fmt.Sprintf("Failed to get user by email %s for site %s: %v", userEmail, siteID, err))
-			return nil, err
-		}
-		if user == nil {
-			log.Warning(ctx, fmt.Sprintf("User not found for email %s in site %s", userEmail, siteID))
-			return &api.IncomeTransactionHistoryResponse{
-				Items:    []*api.IncomeTransactionItem{},
-				Total:    0,
-				Page:     page,
-				PageSize: pageSize,
-			}, nil
-		}
-		filterUserID = user.UserID
-		log.AddNotice(ctx, "filter_user_id", filterUserID)
+		emailSearch = strings.TrimSpace(userEmail)
 	}
 	offset := (page - 1) * pageSize
 
@@ -89,6 +74,7 @@ func (s *analyticsService) GetPaymentTransactions(
 		ctx,
 		siteID,
 		filterUserID,
+		emailSearch,
 		startTime,
 		endTime,
 		pageSize,
@@ -104,6 +90,7 @@ func (s *analyticsService) GetPaymentTransactions(
 		ctx,
 		siteID,
 		filterUserID,
+		emailSearch,
 		startTime,
 		endTime,
 	)
