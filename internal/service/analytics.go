@@ -15,7 +15,7 @@ import (
 // AnalyticsService handles analytics operations
 type AnalyticsService interface {
 	// GetPaymentTransactions retrieves payment transactions for a site within a time range
-	GetPaymentTransactions(ctx *gin.Context, siteID string, userEmail string, startTime, endTime time.Time, page, pageSize int) (*api.IncomeTransactionHistoryResponse, error)
+	GetPaymentTransactions(ctx *gin.Context, siteID string, userID string, userEmail string, startTime, endTime time.Time, page, pageSize int) (*api.IncomeTransactionHistoryResponse, error)
 	// GetIncomeStatistics retrieves daily income statistics for a site within a time range
 	GetIncomeStatistics(ctx *gin.Context, siteID string, startTime, endTime time.Time) (*api.IncomeStatisticsResponse, error)
 	// GetTransactionByID retrieves a specific payment transaction by its ID
@@ -45,6 +45,7 @@ func NewAnalyticsService(
 func (s *analyticsService) GetPaymentTransactions(
 	ctx *gin.Context,
 	siteID string,
+	userID string,
 	userEmail string,
 	startTime,
 	endTime time.Time,
@@ -53,10 +54,11 @@ func (s *analyticsService) GetPaymentTransactions(
 ) (*api.IncomeTransactionHistoryResponse, error) {
 	// Add business context logging
 	log.AddNotice(ctx, "target_site_id", siteID)
+	log.AddNotice(ctx, "filter_user_id", userID)
 	log.AddNotice(ctx, "filter_user_email", userEmail)
 
-	userID := ""
-	if userEmail != "" {
+	filterUserID := userID
+	if filterUserID == "" && userEmail != "" {
 		// Get user ID by email
 		user, err := s.userRepository.GetByEmailAndSiteID(ctx, userEmail, siteID)
 		if err != nil {
@@ -65,10 +67,15 @@ func (s *analyticsService) GetPaymentTransactions(
 		}
 		if user == nil {
 			log.Warning(ctx, fmt.Sprintf("User not found for email %s in site %s", userEmail, siteID))
-			return nil, nil // Not found, but not an error
+			return &api.IncomeTransactionHistoryResponse{
+				Items:    []*api.IncomeTransactionItem{},
+				Total:    0,
+				Page:     page,
+				PageSize: pageSize,
+			}, nil
 		}
-		userID = user.UserID
-		log.AddNotice(ctx, "filter_user_id", userID)
+		filterUserID = user.UserID
+		log.AddNotice(ctx, "filter_user_id", filterUserID)
 	}
 	offset := (page - 1) * pageSize
 
@@ -76,7 +83,7 @@ func (s *analyticsService) GetPaymentTransactions(
 	transactions, err := s.paymentTransactionRepo.ListBySiteIDAndTimeRange(
 		ctx,
 		siteID,
-		userID,
+		filterUserID,
 		startTime,
 		endTime,
 		pageSize,
@@ -91,7 +98,7 @@ func (s *analyticsService) GetPaymentTransactions(
 	count, err := s.paymentTransactionRepo.CountBySiteIDAndTimeRange(
 		ctx,
 		siteID,
-		userID,
+		filterUserID,
 		startTime,
 		endTime,
 	)

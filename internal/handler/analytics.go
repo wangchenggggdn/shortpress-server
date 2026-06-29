@@ -79,6 +79,7 @@ func (h *AnalyticsHandler) IncomeTransactions(ctx *gin.Context) {
 	response, err := h.analyticsService.GetPaymentTransactions(
 		ctx,
 		req.SiteID,
+		req.UserID,
 		req.UserEmail,
 		startTime,
 		endTime,

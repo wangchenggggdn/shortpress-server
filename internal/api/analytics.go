@@ -4,6 +4,7 @@ import "shortpress-server/internal/types"
 
 type IncomeTransactionsRequest struct {
 	SiteID    string `json:"siteId" binding:"required"`
+	UserID    string `json:"userId"`    // Optional user ID for filtering
 	UserEmail string `json:"userEmail"` // Optional user email for filtering
 	StartTime int64  `json:"startTime"` // Optional start timestamp
 	EndTime   int64  `json:"endTime"`   // Optional end timestamp
