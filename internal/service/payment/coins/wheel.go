@@ -38,14 +38,14 @@ var wheelFreePrizes = []wheelPrize{
 }
 
 var wheelPaidPrizes = []wheelPrize{
-	{ID: "thanks", Coins: 0, Weight: 280},
-	{ID: "break_even", Coins: 10, Weight: 220},
-	{ID: "coins_25", Coins: 25, Weight: 200},
-	{ID: "coins_50", Coins: 50, Weight: 140},
-	{ID: "coins_80", Coins: 80, Weight: 80},
-	{ID: "coins_120", Coins: 120, Weight: 50},
-	{ID: "coins_200", Coins: 200, Weight: 25},
-	{ID: "coins_300", Coins: 300, Weight: 5},
+	{ID: "thanks", Coins: 0, Weight: 345},
+	{ID: "break_even", Coins: 10, Weight: 280},
+	{ID: "coins_25", Coins: 25, Weight: 258},
+	{ID: "coins_50", Coins: 50, Weight: 70},
+	{ID: "coins_80", Coins: 80, Weight: 30},
+	{ID: "coins_120", Coins: 120, Weight: 12},
+	{ID: "coins_200", Coins: 200, Weight: 4},
+	{ID: "coins_300", Coins: 300, Weight: 1},
 }
 
 var wheelCST = time.FixedZone("CST", 8*3600)
