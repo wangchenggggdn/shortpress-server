@@ -311,6 +311,7 @@ func registerClientRoutes(apiGroup *gin.RouterGroup, clientPlayerHandler *handle
 
 		playerWithSiteID.GET("/new-release", clientPlayerHandler.NewRelease)  // New release videos
 		playerWithSiteID.GET("/playlists", clientPlayerHandler.AllPlaylistID) // Get all playlist IDs for the site
+		playerWithSiteID.GET("/plist", clientPlayerHandler.SitePlist)         // Get published playlist IDs excluding m1 traffic
 
 	}
 

@@ -46,13 +46,14 @@ type PlaylistView struct {
 }
 
 type PlaylistQuery struct {
-	CreatorID     string
-	SiteID        string
-	ExcludeSiteId string
-	Status        *int
-	Keyword       string
-	UtmSource     string // UTM 来源过滤
-	FilterUtm     bool   // 是否需要强制进行 UTM 过滤
+	CreatorID         string
+	SiteID            string
+	ExcludeSiteId     string
+	Status            *int
+	Keyword           string
+	UtmSource         string // UTM 来源过滤
+	FilterUtm         bool   // 是否需要强制进行 UTM 过滤
+	ExcludeUtmSource  string // 排除指定 UTM 来源（精确匹配或逗号分隔列表）
 }
 
 // Define video list sorting method constants (0:Create time descending 1:Name sorting)

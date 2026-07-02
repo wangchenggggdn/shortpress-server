@@ -43,6 +43,8 @@ type ClientPlayerService interface {
 	GetUserPlayHistory(ctx *gin.Context, userID, siteID string, page, pageSize int) ([]*model.UserPlayRecord, int64, error)
 	// GetAllPlaylistIDs Get all playlist IDs for a site with pagination and i18n support
 	GetAllPlaylistIDs(ctx *gin.Context, siteID string, page, pageSize int) ([]*api.PlaylistSlugItem, int64, error)
+	// GetSitePlist Get published playlists for a site, excluding specific utm_source
+	GetSitePlist(ctx *gin.Context, siteID string, page, pageSize, orderType int) ([]*api.PlaylistInfo, int64, error)
 }
 
 func NewClientPlayerService(
@@ -368,13 +370,45 @@ func (s *clientPlayerService) BatchGetPlaylistInfo(ctx *gin.Context, playlistIDs
 		return []*api.PlaylistInfo{}, nil
 	}
 
-	// Create a map for quick lookup
-	playlistMap := make(map[string]*model.Playlist)
+	playlistMap := make(map[string]*model.Playlist, len(playlists))
 	for _, p := range playlists {
 		playlistMap[p.PlaylistID] = p
 	}
 
-	// 2. Batch get i18n data if lang is provided
+	return s.buildPlaylistInfoList(ctx, playlistIDs, playlistMap, lang, needVideo, false, userID)
+}
+
+func (s *clientPlayerService) buildPlaylistInfoList(ctx *gin.Context, playlistIDs []string, playlistMap map[string]*model.Playlist, lang string, needVideo bool, includeVideoConfig bool, userID string) ([]*api.PlaylistInfo, error) {
+	orderDataMap := make(map[string]*api.VideoSortData, len(playlistIDs))
+	for _, playlistID := range playlistIDs {
+		playlist := playlistMap[playlistID]
+		if playlist == nil || playlist.OrderVids == "" {
+			continue
+		}
+		orderData := &api.VideoSortData{}
+		if err := json.Unmarshal([]byte(playlist.OrderVids), orderData); err != nil {
+			log.Error(ctx, "unmarshal order vids error for "+playlistID+": "+err.Error())
+			continue
+		}
+		orderDataMap[playlistID] = orderData
+	}
+
+	videoMap := make(map[string]*model.Video)
+	if needVideo || includeVideoConfig {
+		allVids := make([]string, 0)
+		for _, orderData := range orderDataMap {
+			allVids = append(allVids, orderData.VIDs...)
+		}
+		if len(allVids) > 0 {
+			vs, err := s.videoRepository.GetByVIDs(ctx, allVids)
+			if err != nil {
+				return nil, err
+			}
+			for _, v := range vs {
+				videoMap[v.VID] = v
+			}
+		}
+	}
 	i18nMap := make(map[string]*model.PlaylistI18n)
 	if lang != "" {
 		for _, playlistID := range playlistIDs {
@@ -390,11 +424,9 @@ func (s *clientPlayerService) BatchGetPlaylistInfo(ctx *gin.Context, playlistIDs
 		}
 	}
 
-	// 3. Batch get SEO data for playlists without i18n
 	seoMap := make(map[string]*model.PlaylistSeo)
 	for _, playlistID := range playlistIDs {
 		if _, exists := playlistMap[playlistID]; exists {
-			// Skip if i18n data exists
 			if _, hasI18n := i18nMap[playlistID]; hasI18n {
 				continue
 			}
@@ -409,20 +441,15 @@ func (s *clientPlayerService) BatchGetPlaylistInfo(ctx *gin.Context, playlistIDs
 		}
 	}
 
-	// 4. Build result maintaining the order of input playlistIDs
 	result := make([]*api.PlaylistInfo, 0, len(playlistIDs))
-
 	for _, playlistID := range playlistIDs {
 		playlist, exists := playlistMap[playlistID]
 		if !exists {
-			continue // Skip if playlist not found
+			continue
 		}
 
-		// Determine final title, description, slug and SEO content
 		var title, description, slug, seoTitle, seoDescription, seoKeywords string
-
 		if playlistI18n, hasI18n := i18nMap[playlistID]; hasI18n {
-			// Use i18n multilingual content
 			title = playlistI18n.Title
 			description = playlistI18n.Description
 			slug = playlistI18n.Slug
@@ -430,11 +457,9 @@ func (s *clientPlayerService) BatchGetPlaylistInfo(ctx *gin.Context, playlistIDs
 			seoDescription = playlistI18n.SeoDescription
 			seoKeywords = playlistI18n.SeoKeywords
 		} else {
-			// Use original content from playlist table
 			title = playlist.Title
 			description = playlist.Description
 			slug = playlist.Slug
-			// Get SEO from map if exists
 			if seo, hasSeo := seoMap[playlistID]; hasSeo {
 				seoTitle = seo.Title
 				seoDescription = seo.Description
@@ -442,44 +467,41 @@ func (s *clientPlayerService) BatchGetPlaylistInfo(ctx *gin.Context, playlistIDs
 			}
 		}
 
-		// Parse OrderVids to get video count
 		videoCount := 0
-		orderData := &api.VideoSortData{}
-		if playlist.OrderVids != "" {
-			err = json.Unmarshal([]byte(playlist.OrderVids), orderData)
-			if err != nil {
-				log.Error(ctx, "unmarshal order vids error for "+playlistID+": "+err.Error())
-				continue // Skip this playlist if JSON is invalid
-			}
+		orderData := orderDataMap[playlistID]
+		if orderData != nil {
 			videoCount = len(orderData.VIDs)
 		}
 
-		// Get videos if needed
 		var videos []*api.VideoItem
 		if needVideo {
+			var err error
 			videos, err = s.getVideoStatusByPlaylist(ctx, playlist, orderData, userID)
 			if err != nil {
 				log.Error(ctx, "get videos error for "+playlistID+": "+err.Error())
-				// Continue without videos if there's an error
 			}
+		} else if includeVideoConfig {
+			videos = buildVideoItemsWithConfig(orderData, videoMap)
 		}
 
-		// Handle FreeVideos pointer conversion
 		freeVideos := 0
 		if playlist.FreeVideos != nil {
 			freeVideos = *playlist.FreeVideos
 		}
 
-		// Build PlaylistInfo
-		playlistInfo := &api.PlaylistInfo{
+		result = append(result, &api.PlaylistInfo{
 			PlaylistID:       playlist.PlaylistID,
 			Title:            title,
 			Slug:             slug,
 			Description:      description,
+			Tags:             playlist.Tags,
 			Cover:            playlist.Cover,
+			Status:           playlist.Status,
+			Version:          playlist.Version,
 			AccessType:       playlist.AccessType,
 			FreeVideos:       freeVideos,
 			SingleVideoPrice: playlist.SingleVideoPrice,
+			UtmSource:        playlist.UtmSource,
 			Seo: &api.PlaylistSeo{
 				Title:       seoTitle,
 				Description: seoDescription,
@@ -487,13 +509,30 @@ func (s *clientPlayerService) BatchGetPlaylistInfo(ctx *gin.Context, playlistIDs
 			},
 			VideoCount: videoCount,
 			Videos:     videos,
-		}
-
-		result = append(result, playlistInfo)
+			CreatedAt:  playlist.CreatedAt.Unix(),
+			UpdatedAt:  playlist.UpdatedAt.Unix(),
+		})
 	}
 
 	log.AddNotice(ctx, "result_count", len(result))
 	return result, nil
+}
+
+func buildVideoItemsWithConfig(orderData *api.VideoSortData, videoMap map[string]*model.Video) []*api.VideoItem {
+	if orderData == nil || len(orderData.VIDs) == 0 {
+		return nil
+	}
+
+	result := make([]*api.VideoItem, 0, len(orderData.VIDs))
+	for _, vid := range orderData.VIDs {
+		item := &api.VideoItem{VID: vid}
+		if video, ok := videoMap[vid]; ok {
+			item.Status = int(video.Status)
+			item.Config = video.Config
+		}
+		result = append(result, item)
+	}
+	return result
 }
 
 func (s *clientPlayerService) GetVideosByPlaylistID(ctx *gin.Context, playlistID string) (*api.VideoSortData, *model.Playlist, error) {
@@ -668,8 +707,12 @@ func (s *clientPlayerService) getVideoStatusByPlaylist(ctx *gin.Context, playlis
 		return nil, nil
 	}
 	videoStatusMap := make(map[string]int)
+	videoConfigMap := make(map[string]json.RawMessage)
 	for _, v := range vs {
 		videoStatusMap[v.VID] = int(v.Status)
+		if len(v.Config) > 0 {
+			videoConfigMap[v.VID] = v.Config
+		}
 	}
 	var user *model.User
 	if userID != "" {
@@ -683,6 +726,7 @@ func (s *clientPlayerService) getVideoStatusByPlaylist(ctx *gin.Context, playlis
 		item := &api.VideoItem{
 			VID:    vid,
 			Status: videoStatusMap[vid],
+			Config: videoConfigMap[vid],
 		}
 
 		// Unlock status
@@ -850,6 +894,46 @@ func (s *clientPlayerService) GetAllPlaylistIDs(ctx *gin.Context, siteID string,
 	}
 
 	log.AddNotice(ctx, "playlist_count", len(items))
+	return items, total, nil
+}
+
+func (s *clientPlayerService) GetSitePlist(ctx *gin.Context, siteID string, page, pageSize, orderType int) ([]*api.PlaylistInfo, int64, error) {
+	site, err := s.siteRepository.GetBySiteID(ctx, siteID)
+	if err != nil {
+		return nil, 0, err
+	}
+	if site == nil {
+		return nil, 0, common.ErrSiteNotFound
+	}
+
+	status := int(model.PlaylistStatusPublished)
+	query := &model.PlaylistQuery{
+		SiteID:           siteID,
+		Status:           &status,
+		ExcludeUtmSource: "m1",
+	}
+
+	playlists, total, err := s.playlistRepository.ListByPage(ctx, query, page, pageSize, orderType)
+	if err != nil {
+		return nil, 0, err
+	}
+	if len(playlists) == 0 {
+		return []*api.PlaylistInfo{}, total, nil
+	}
+
+	playlistIDs := make([]string, 0, len(playlists))
+	playlistMap := make(map[string]*model.Playlist, len(playlists))
+	for _, p := range playlists {
+		playlistIDs = append(playlistIDs, p.PlaylistID)
+		playlistMap[p.PlaylistID] = p
+	}
+
+	lang := ctx.GetString("lang")
+	userID := ctx.GetString("user_id")
+	items, err := s.buildPlaylistInfoList(ctx, playlistIDs, playlistMap, lang, false, true, userID)
+	if err != nil {
+		return nil, 0, err
+	}
 	return items, total, nil
 }
 

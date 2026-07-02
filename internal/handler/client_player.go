@@ -783,6 +783,69 @@ func (h *ClientPlayerHandler) AllPlaylistID(ctx *gin.Context) {
 	api.HandleSuccess(ctx, result)
 }
 
+// SitePlist godoc
+// @Summary Get site playlists (exclude m1 traffic)
+// @Description Get published playlists for a site, excluding utm_source=m1 playlists. Items format matches /api/client/playlist/batch-get.
+// @Tags client-player
+// @Accept json
+// @Produce json
+// @Param site_id query string true "Site ID" example("80de3f91-5295-4731-ac33-8893ad3f400c")
+// @Param orderType query int false "Sort type (0:Create time descending 1:Name sorting)" example(0)
+// @Param page query int false "Page number, default 1" minimum(1) example(1)
+// @Param pageSize query int false "Items per page, default 8" minimum(1) maximum(20) example(8)
+// @Success 200 {object} api.IDListResponseData[api.PlaylistInfo] "Returns playlist list"
+// @Router /api/client/site/plist [get]
+func (h *ClientPlayerHandler) SitePlist(ctx *gin.Context) {
+	siteID := ctx.Query("site_id")
+	if siteID == "" {
+		siteID = ctx.Query("siteId")
+	}
+	if siteID == "" {
+		siteID = middleware.GetSiteID(ctx)
+	}
+	if siteID == "" {
+		api.HandleErrorWithHttpCode(ctx, http.StatusBadRequest, fmt.Errorf("site_id is required"), nil)
+		return
+	}
+
+	page := 1
+	pageSize := 8
+	orderType := 0
+	if p := ctx.Query("page"); p != "" {
+		if v, err := strconv.Atoi(p); err == nil && v > 0 {
+			page = v
+		}
+	}
+	if ps := ctx.Query("pageSize"); ps != "" {
+		if v, err := strconv.Atoi(ps); err == nil && v > 0 {
+			pageSize = v
+		}
+	}
+	if ot := ctx.Query("orderType"); ot != "" {
+		if v, err := strconv.Atoi(ot); err == nil {
+			orderType = v
+		}
+	}
+	if pageSize > 20 {
+		pageSize = 20
+	}
+
+	items, total, err := h.clientPlayerService.GetSitePlist(ctx, siteID, page, pageSize, orderType)
+	if err != nil {
+		log.Error(ctx, "get site plist failed, error: "+err.Error())
+		api.HandleError(ctx, err, nil)
+		return
+	}
+
+	api.HandleSuccess(ctx, api.IDListResponseData[*api.PlaylistInfo]{
+		Total:    int(total),
+		Page:     page,
+		PageSize: pageSize,
+		HasMore:  int64(page*pageSize) < total,
+		Items:    items,
+	})
+}
+
 // UploadFile godoc
 // @Summary Upload file without authentication
 // @Description Upload an image file without authentication (for client users)

@@ -218,6 +218,10 @@ func (r *playlistRepository) ListByPage(ctx context.Context, query *model.Playli
 		db = db.Where("utm_source LIKE ?", "%"+query.UtmSource+"%")
 	}
 
+	if query.ExcludeUtmSource != "" {
+		db = db.Where("(playlists.utm_source IS NULL OR playlists.utm_source = '' OR NOT (playlists.utm_source = ? OR FIND_IN_SET(?, playlists.utm_source) > 0))", query.ExcludeUtmSource, query.ExcludeUtmSource)
+	}
+
 	// Get total count
 	if err := db.Count(&total).Error; err != nil {
 		return nil, 0, err

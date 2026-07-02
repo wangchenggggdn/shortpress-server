@@ -1,6 +1,10 @@
 package api
 
-import "shortpress-server/internal/types"
+import (
+	"encoding/json"
+
+	"shortpress-server/internal/types"
+)
 
 type PlaylistList struct {
 	Items []*PlaylistInfo `json:"items"` // Playlist list
@@ -100,9 +104,10 @@ type PlaylistAccessChangeRequest struct {
 }
 
 type VideoItem struct {
-	VID          string `json:"vid"`          // Video ID
-	Status       int    `json:"status"`       // Video status
-	UnLockStatus int    `json:"unlockStatus"` // Unlock status 1 - unlocked, 2 - locked  0 - not applicable
+	VID          string          `json:"vid"`              // Video ID
+	Status       int             `json:"status"`           // Video status
+	UnLockStatus int             `json:"unlockStatus"`     // Unlock status 1 - unlocked, 2 - locked  0 - not applicable
+	Config       json.RawMessage `json:"config,omitempty"` // Video config from videos table
 	// Title       string `json:"title"`  // Video title
 	// UploadDate  int64  `json:"uploadDate"` // Video upload date
 }
