@@ -83,6 +83,7 @@ type CoinPackageCreateRequest struct {
 	Price              types.Money     `json:"price" binding:"required"`
 	OriginalPrice      types.Money     `json:"originalPrice"`
 	DiscountPercentage int             `json:"discountPercentage"`
+	IOSProductID       string          `json:"iosProductId"`
 }
 
 // CoinPackageCreateResponse defines the response structure for creating a coin package
@@ -96,8 +97,9 @@ type CoinPackageModifyRequest struct {
 	SiteID      string          `json:"siteId" binding:"required"`
 	Name        string          `json:"name"`
 	Description string          `json:"description"`
-	Features    json.RawMessage `json:"features,omitempty"` // Array of feature highlights, e.g. ["买100送20", "限时优惠"]
-	Status      int             `json:"status"`
+	Features     json.RawMessage `json:"features,omitempty"` // Array of feature highlights, e.g. ["买100送20", "限时优惠"]
+	Status       int             `json:"status"`
+	IOSProductID string          `json:"iosProductId"`
 }
 
 // CoinPackageModifyResponse defines the response structure for modifying a coin package
@@ -119,6 +121,7 @@ type SubscriptionData struct {
 	Coins              int             `json:"coins"`                        // 赠送金币数量
 	Rights             json.RawMessage `json:"rights"`                       // 订阅权益
 	Status             int             `json:"status"`                       // 状态：1启用 2禁用
+	IOSProductID       string          `json:"iosProductId"`                 // App Store 商品 ID
 	CreatedAt          int64           `json:"createdAt"`                    // 创建时间
 }
 
@@ -165,6 +168,7 @@ type CoinPackageResponseData struct {
 	Currency           string          `json:"currency"`
 	DiscountPercentage int             `json:"discountPercentage,omitempty"`
 	Status             int             `json:"status"`
+	IOSProductID       string          `json:"iosProductId"`
 }
 
 // UserCoinsResponse represents a user's coin account information in API responses

@@ -322,6 +322,7 @@ func (s *paypalService) CreateCoinPackage(ctx context.Context, req api.CoinPacka
 		CoinAmount:  req.CoinAmount,
 		Price:       int64(req.Price),
 		Currency:    "USD",
+		IOSProductID: req.IOSProductID,
 		Status:      1,
 	}
 

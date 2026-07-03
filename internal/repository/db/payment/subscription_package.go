@@ -34,7 +34,15 @@ func (r *subscriptionPackageRepository) Create(ctx context.Context, entity inter
 
 func (r *subscriptionPackageRepository) Update(ctx context.Context, entity interface{}) error {
 	recoder := entity.(*model.SubscriptionPackage)
-	return r.DB(ctx).Where("package_id = ?", recoder.PackageID).Updates(recoder).Error
+	return r.DB(ctx).Model(&model.SubscriptionPackage{}).Where("package_id = ?", recoder.PackageID).
+		Updates(map[string]interface{}{
+			"name":           recoder.Name,
+			"description":    recoder.Description,
+			"coins":          recoder.Coins,
+			"rights":         recoder.Rights,
+			"status":         recoder.Status,
+			"ios_product_id": recoder.IOSProductID,
+		}).Error
 }
 
 func (r *subscriptionPackageRepository) GetByPackageID(ctx context.Context, packageID string) (*model.SubscriptionPackage, error) {

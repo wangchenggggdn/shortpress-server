@@ -105,6 +105,7 @@ func (s *subscriptionService) CreateSubscriptionPackage(ctx context.Context, sit
 		Coins:              req.Coins,
 		Rights:             req.Rights,
 		Status:             req.Status,
+		IOSProductID:       req.IOSProductID,
 	}
 
 	// Save to repository
@@ -127,6 +128,7 @@ func (s *subscriptionService) CreateSubscriptionPackage(ctx context.Context, sit
 		Coins:              pkg.Coins,
 		Rights:             pkg.Rights,
 		Status:             pkg.Status,
+		IOSProductID:       pkg.IOSProductID,
 		CreatedAt:          pkg.CreatedAt.Unix(),
 	}
 
@@ -158,6 +160,7 @@ func (s *subscriptionService) ListBySiteID(ctx context.Context, siteID string, s
 			Coins:              pkg.Coins,
 			Rights:             pkg.Rights,
 			Status:             pkg.Status,
+			IOSProductID:       pkg.IOSProductID,
 			CreatedAt:          pkg.CreatedAt.Unix(),
 		}
 		responses = append(responses, response)
@@ -195,6 +198,8 @@ func (s *subscriptionService) UpdateSubscriptionPackage(ctx context.Context, pac
 		pkg.Status = req.Status
 	}
 
+	pkg.IOSProductID = req.IOSProductID
+
 	// Save changes
 	err = s.subscriptionPackageRepo.Update(ctx, pkg)
 	if err != nil {
@@ -230,6 +235,7 @@ func (s *subscriptionService) GetByPackageID(ctx context.Context, siteID, packag
 		Coins:              pkg.Coins,
 		Rights:             pkg.Rights,
 		Status:             pkg.Status,
+		IOSProductID:       pkg.IOSProductID,
 		CreatedAt:          pkg.CreatedAt.Unix(),
 	}
 

@@ -308,6 +308,7 @@ func (s *coinsService) ListPackages(ctx context.Context, siteID string, status i
 			Currency:           pkg.Currency,
 			DiscountPercentage: pkg.DiscountPercentage,
 			Status:             pkg.Status,
+			IOSProductID:       pkg.IOSProductID,
 		})
 	}
 
@@ -714,8 +715,21 @@ func (s *coinsService) UpdateCoinPackage(ctx context.Context, coinPackage *model
 		return common.ErrBadRequest
 	}
 
-	// Update the coin package
-	err = s.coinPackageRepo.Update(ctx, coinPackage)
+	if coinPackage.Name != "" {
+		existingPackage.Name = coinPackage.Name
+	}
+	if coinPackage.Description != "" {
+		existingPackage.Description = coinPackage.Description
+	}
+	if coinPackage.Features != nil {
+		existingPackage.Features = coinPackage.Features
+	}
+	if coinPackage.Status != 0 {
+		existingPackage.Status = coinPackage.Status
+	}
+	existingPackage.IOSProductID = coinPackage.IOSProductID
+
+	err = s.coinPackageRepo.Update(ctx, existingPackage)
 	if err != nil {
 		return err
 	}

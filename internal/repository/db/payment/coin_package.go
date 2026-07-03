@@ -33,7 +33,14 @@ func (r *coinPackageRepository) Create(ctx context.Context, entity interface{}) 
 
 func (r *coinPackageRepository) Update(ctx context.Context, entity interface{}) error {
 	recoder := entity.(*model.CoinPackage)
-	return r.DB(ctx).Where("package_id = ?", recoder.PackageID).Updates(recoder).Error
+	return r.DB(ctx).Model(&model.CoinPackage{}).Where("package_id = ?", recoder.PackageID).
+		Updates(map[string]interface{}{
+			"name":           recoder.Name,
+			"description":    recoder.Description,
+			"features":       recoder.Features,
+			"status":         recoder.Status,
+			"ios_product_id": recoder.IOSProductID,
+		}).Error
 }
 
 func (r *coinPackageRepository) GetByPackageID(ctx context.Context, packageID string) (*model.CoinPackage, error) {

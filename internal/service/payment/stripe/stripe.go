@@ -292,7 +292,8 @@ func (s *stripeService) CreateCoinPackage(ctx context.Context, req api.CoinPacka
 		Currency:           "USD",
 		DiscountPercentage: req.DiscountPercentage,
 		// StripePriceID:      priceID,
-		Status: 1,
+		IOSProductID: req.IOSProductID,
+		Status:       1,
 	}
 
 	err := s.coinPackageRepo.Create(ctx, coinPackage)

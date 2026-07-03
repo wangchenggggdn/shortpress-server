@@ -328,12 +328,13 @@ func (h *CoinsHandler) ModifyCoinPackage(ctx *gin.Context) {
 	}
 
 	coinPackage := &model.CoinPackage{
-		PackageID:   req.PackageID,
-		SiteID:      req.SiteID,
-		Name:        req.Name,
-		Description: req.Description,
-		Features:    req.Features,
-		Status:      req.Status,
+		PackageID:    req.PackageID,
+		SiteID:       req.SiteID,
+		Name:         req.Name,
+		Description:  req.Description,
+		Features:     req.Features,
+		Status:       req.Status,
+		IOSProductID: req.IOSProductID,
 	}
 
 	err := h.coinsService.UpdateCoinPackage(ctx, coinPackage)
