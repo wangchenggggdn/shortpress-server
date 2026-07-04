@@ -104,10 +104,12 @@ type PlaylistAccessChangeRequest struct {
 }
 
 type VideoItem struct {
-	VID          string          `json:"vid"`              // Video ID
-	Status       int             `json:"status"`           // Video status
-	UnLockStatus int             `json:"unlockStatus"`     // Unlock status 1 - unlocked, 2 - locked  0 - not applicable
-	Config       json.RawMessage `json:"config,omitempty"` // Video config from videos table
+	VID          string          `json:"vid"`                    // Video ID
+	Status       int             `json:"status"`                 // Video status
+	UnLockStatus int             `json:"unlockStatus"`           // Unlock status 1 - unlocked, 2 - locked  0 - not applicable
+	Config       json.RawMessage `json:"config,omitempty"`       // Video config from videos table
+	Cover        *types.ImageURL `json:"cover,omitempty"`        // Video cover
+	LocalPath    *types.ImageURL `json:"local_path,omitempty"`   // Playback path derived from cover (extension replaced with .mp4)
 	// Title       string `json:"title"`  // Video title
 	// UploadDate  int64  `json:"uploadDate"` // Video upload date
 }

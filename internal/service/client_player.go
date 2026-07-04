@@ -529,10 +529,27 @@ func buildVideoItemsWithConfig(orderData *api.VideoSortData, videoMap map[string
 		if video, ok := videoMap[vid]; ok {
 			item.Status = int(video.Status)
 			item.Config = video.Config
+			item.Cover = video.Cover
+			item.LocalPath = localPathFromCover(video.Cover)
 		}
 		result = append(result, item)
 	}
 	return result
+}
+
+// localPathFromCover derives playback URL by replacing the cover file extension with .mp4.
+func localPathFromCover(cover *types.ImageURL) *types.ImageURL {
+	if cover == nil || *cover == "" {
+		return nil
+	}
+	path := string(*cover)
+	if i := strings.LastIndex(path, "."); i >= 0 && !strings.Contains(path[i:], "/") {
+		path = path[:i] + ".mp4"
+	} else {
+		path = path + ".mp4"
+	}
+	localPath := types.ImageURL(path)
+	return &localPath
 }
 
 func (s *clientPlayerService) GetVideosByPlaylistID(ctx *gin.Context, playlistID string) (*api.VideoSortData, *model.Playlist, error) {
