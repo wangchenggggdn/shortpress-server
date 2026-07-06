@@ -18,6 +18,7 @@ type User struct {
 	OnetimeSub       int8       `gorm:"column:onetime_sub;not null;default:0" json:"onetime_sub"` // 1: 一次性订阅用户
 	PremiumExpiresAt *time.Time `gorm:"column:premium_expires_at" json:"premium_expires_at,omitempty"`
 	Referer              string     `gorm:"column:referer" json:"referer"`
+	PixelID              string     `gorm:"column:pixel_id" json:"pixelId"`
 	MetaFbc              string     `gorm:"column:meta_fbc" json:"metaFbc"`
 	MetaFbp              string     `gorm:"column:meta_fbp" json:"metaFbp"`
 	MetaFbclid           string     `gorm:"column:meta_fbclid" json:"metaFbclid"`

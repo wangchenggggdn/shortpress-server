@@ -254,3 +254,34 @@ func (h *UserHandler) SyncMetaClick(ctx *gin.Context) {
 	}
 	api.HandleSuccess(ctx, nil)
 }
+
+// SyncPixel godoc
+// @Summary Sync user Facebook Pixel ID
+// @Description Persist the effective Facebook Pixel ID on the user for browser Pixel and CAPI attribution
+// @Tags user
+// @Accept json
+// @Produce json
+// @Param X-Site-Id header string true "Site ID"
+// @Param Authorization header string true "Bearer user token"
+// @Param request body api.PixelSyncRequest true "Pixel payload"
+// @Success 200 {object} api.Response
+// @Router /api/user/pixel/sync [post]
+func (h *UserHandler) SyncPixel(ctx *gin.Context) {
+	var req api.PixelSyncRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		api.HandleErrorWithHttpCode(ctx, http.StatusBadRequest, err, nil)
+		return
+	}
+	userID := ctx.GetString("user_id")
+	if userID == "" {
+		api.HandleErrorWithHttpCode(ctx, http.StatusUnauthorized, common.ErrUnauthorized, nil)
+		return
+	}
+	data, err := h.userService.SyncPixel(ctx, userID, &req)
+	if err != nil {
+		log.Error(ctx, "sync pixel failed: "+err.Error())
+		api.HandleError(ctx, err, nil)
+		return
+	}
+	api.HandleSuccess(ctx, data)
+}

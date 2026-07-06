@@ -181,7 +181,10 @@ func (s *TrackingService) trackFacebookPurchase(ctx context.Context, transaction
 		return fmt.Errorf("site not found: %s", transaction.SiteID)
 	}
 	pixelID := ""
-	if siteRow.FacebookPixelID != nil {
+	if u != nil && strings.TrimSpace(u.PixelID) != "" {
+		pixelID = strings.TrimSpace(u.PixelID)
+	}
+	if pixelID == "" && siteRow.FacebookPixelID != nil {
 		pixelID = strings.TrimSpace(*siteRow.FacebookPixelID)
 	}
 	accessToken := ""

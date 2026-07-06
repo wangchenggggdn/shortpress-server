@@ -29,6 +29,7 @@ type UserService interface {
 	GetUserProfile(ctx *gin.Context, userID string) (*api.UserProfileData, error)
 	ModifyUserProfile(ctx *gin.Context, userID string, req *api.UserProfileModifyRequest) error
 	SyncMetaClick(ctx *gin.Context, userID string, req *api.MetaClickSyncRequest) error
+	SyncPixel(ctx *gin.Context, userID string, req *api.PixelSyncRequest) (*api.PixelSyncResponseData, error)
 }
 
 type userService struct {
@@ -309,6 +310,12 @@ func (s *userService) register(ctx *gin.Context, args *registerArgs) (string, er
 	log.AddNotice(ctx, "referer", referer)
 	log.AddNotice(ctx, "page", page)
 
+	pixelID, err := s.resolveRequestPixelID(ctx, args.SiteID)
+	if err != nil {
+		return "", err
+	}
+	log.AddNotice(ctx, "pixel_id", pixelID)
+
 	// Create user model
 	now := time.Now()
 	user := &model.User{
@@ -320,6 +327,7 @@ func (s *userService) register(ctx *gin.Context, args *registerArgs) (string, er
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
 		Referer:     referer,
+		PixelID:     pixelID,
 		LastLoginAt: &now,
 		Ver:         appVersion,
 	}
@@ -350,7 +358,7 @@ func (s *userService) register(ctx *gin.Context, args *registerArgs) (string, er
 	}
 
 	// Use transaction to ensure data consistency
-	err := s.tx.Transaction(ctx, func(ctx context.Context) error {
+	err = s.tx.Transaction(ctx, func(ctx context.Context) error {
 		if err := s.userRepository.Create(ctx, user); err != nil {
 			return err
 		}
@@ -498,8 +506,34 @@ func (s *userService) GetUserProfile(ctx *gin.Context, userID string) (*api.User
 		Status:           user.Status,
 		LoginType:        userAuths[0].Type,
 		HasPurchased:     hasPurchased,
+		PixelID:          user.PixelID,
 		Ver:              user.Ver,
 	}, nil
+}
+
+func (s *userService) resolveRequestPixelID(ctx *gin.Context, siteID string) (string, error) {
+	pixelID := strings.TrimSpace(ctx.GetHeader("First-Pixel-Id"))
+	if pixelID == "" {
+		pixelID = strings.TrimSpace(ctx.GetHeader("Pixel-Id"))
+	}
+	if pixelID != "" {
+		return pixelID, nil
+	}
+	return s.defaultPixelIDForSite(ctx, siteID)
+}
+
+func (s *userService) defaultPixelIDForSite(ctx context.Context, siteID string) (string, error) {
+	siteRow, err := s.siteRepository.GetBySiteID(ctx, siteID)
+	if err != nil {
+		return "", err
+	}
+	if siteRow == nil {
+		return "", common.ErrSiteNotFound
+	}
+	if siteRow.FacebookPixelID == nil {
+		return "", nil
+	}
+	return strings.TrimSpace(*siteRow.FacebookPixelID), nil
 }
 
 // ModifyUserProfile modifies the profile information for a user
@@ -550,4 +584,39 @@ func (s *userService) SyncMetaClick(ctx *gin.Context, userID string, req *api.Me
 		EventSourceURL: req.EventSourceURL,
 	}
 	return analytics.PersistUserMetaClick(ctx, s.userRepository, userID, payload)
+}
+
+// SyncPixel persists the effective Facebook Pixel ID on the user row.
+func (s *userService) SyncPixel(ctx *gin.Context, userID string, req *api.PixelSyncRequest) (*api.PixelSyncResponseData, error) {
+	user, err := s.userRepository.GetByUserID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil {
+		return nil, common.ErrUserNotFound
+	}
+
+	existing := strings.TrimSpace(user.PixelID)
+	if existing != "" {
+		return &api.PixelSyncResponseData{PixelID: existing, Source: "database"}, nil
+	}
+
+	pixelID := ""
+	if req != nil {
+		pixelID = strings.TrimSpace(req.PixelID)
+	}
+	if pixelID == "" {
+		pixelID, err = s.resolveRequestPixelID(ctx, user.SiteID)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if pixelID == "" {
+		return &api.PixelSyncResponseData{}, nil
+	}
+
+	if err := s.userRepository.UpdatePixelID(ctx, userID, pixelID); err != nil {
+		return nil, err
+	}
+	return &api.PixelSyncResponseData{PixelID: pixelID, Source: "client_written"}, nil
 }

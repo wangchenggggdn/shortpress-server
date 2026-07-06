@@ -274,6 +274,7 @@ func registerUserRoutes(apiGroup *gin.RouterGroup, userHandler *handler.UserHand
 			authUserGroup.GET("/profile", userHandler.GetProfile)
 			authUserGroup.POST("/profile-modify", userHandler.ProfileModify) //修改用户信息
 			authUserGroup.POST("/meta-click/sync", userHandler.SyncMetaClick)
+			authUserGroup.POST("/pixel/sync", userHandler.SyncPixel)
 		}
 	}
 }

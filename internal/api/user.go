@@ -51,6 +51,7 @@ type UserProfileData struct {
 	AutoUnlock       bool   `json:"autoUnlock"` // Whether auto-unlock is enabled
 	Status           int8   `json:"status"`
 	Referer          string `json:"referer"`
+	PixelID          string `json:"pixelId"`
 	LoginType        int8   `json:"loginType"` // 0: email, 1: google, 2: facebook, 3: twitter, 4: tiktok
 	HasPurchased     bool   `json:"hasPurchased"` // Whether the user has made any purchases
 	Ver              string `json:"ver"` // App version from header
@@ -85,6 +86,17 @@ type MetaClickSyncRequest struct {
 	Fbp            string `json:"fbp,omitempty"`
 	Fbclid         string `json:"fbclid,omitempty"`
 	EventSourceURL string `json:"eventSourceUrl,omitempty"`
+}
+
+// PixelSyncRequest syncs the effective Facebook Pixel ID into the user row.
+type PixelSyncRequest struct {
+	PixelID string `json:"pixelId,omitempty"`
+}
+
+// PixelSyncResponseData contains the confirmed pixel id after sync.
+type PixelSyncResponseData struct {
+	PixelID string `json:"pixelId,omitempty"`
+	Source  string `json:"source,omitempty"`
 }
 
 // UserProfileModifyRequest represents the request for user profile modification

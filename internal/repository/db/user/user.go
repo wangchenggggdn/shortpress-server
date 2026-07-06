@@ -22,6 +22,7 @@ type UserRepository interface {
 	Delete(ctx context.Context, userID string) error
 	UpdateIdentifierAndEmail(ctx context.Context, user *model.User) error
 	UpdateMetaClickIds(ctx context.Context, userID, fbc, fbp, fbclid string) error
+	UpdatePixelID(ctx context.Context, userID, pixelID string) error
 }
 
 type userRepository struct {
@@ -66,6 +67,15 @@ func (r *userRepository) UpdateMetaClickIds(ctx context.Context, userID, fbc, fb
 		updates["meta_fbclid"] = fbclid
 	}
 	return r.DB(ctx).Model(&model.User{}).Where("user_id = ?", userID).Updates(updates).Error
+}
+
+func (r *userRepository) UpdatePixelID(ctx context.Context, userID, pixelID string) error {
+	return r.DB(ctx).Model(&model.User{}).
+		Where("user_id = ?", userID).
+		Updates(map[string]interface{}{
+			"pixel_id":   pixelID,
+			"updated_at": time.Now(),
+		}).Error
 }
 
 // GetByUserID retrieves a user by user_id
