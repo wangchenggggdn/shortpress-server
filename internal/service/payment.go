@@ -21,18 +21,18 @@ type PaymentVerifyRequest struct {
 
 	UserID    string
 	SiteID    string
-	PackageID string // 购买的商品ID,是数据库中的packageID，不是iap的ProductID
+	PackageID string `json:"packageId"` // 购买的商品ID,是数据库中的packageID，不是iap的ProductID
 }
 
 type PaymentVerifyAndSyncSubStatusResponse struct {
-	IsActive        bool
-	Sandbox         bool
-	IsInFreeTrial   bool
-	AutoRenewStatus bool
+	IsActive        bool `json:"isActive"`
+	Sandbox         bool `json:"sandbox"`
+	IsInFreeTrial   bool `json:"isInFreeTrial"`
+	AutoRenewStatus bool `json:"autoRenewStatus"`
 }
 
 type PaymentVerifyInAppPurchaseResponse struct {
-	ProductID string
+	ProductID string `json:"productId"`
 }
 
 type PaymentNotifyRequest struct {
@@ -187,18 +187,11 @@ func (b *paymentBiz) processSubscriptionPayment(ctx context.Context, req *Paymen
 		return fmt.Errorf("failed to update user premium status: %w", err)
 	}
 
-	coinPackage, err := b.coinPackageRepo.GetByPackageID(ctx, req.PackageID)
-	if err != nil {
-		return fmt.Errorf("failed to get coin package: %w", err)
-	}
-	// userCoins, err := s.userCoinsRepo.UpdateBalance(ctx, params.UserID, params.SiteID, params.Amount, params.RealMoneySpent)
-	// if err != nil {
-	//     return nil, err
-	// }
-	// There's a coupling here - we need to record the subscription user's spending amount in the user's coin account
-	_, err = b.userCoinsRepository.UpdateBalance(ctx, req.UserID, req.SiteID, 0, int64(coinPackage.CoinAmount))
-	if err != nil {
-		return fmt.Errorf("failed to update user balance: %w", err)
+	if subPackage.Coins > 0 {
+		_, err = b.userCoinsRepository.UpdateBalance(ctx, req.UserID, req.SiteID, subPackage.Coins, 0)
+		if err != nil {
+			return fmt.Errorf("failed to update user balance: %w", err)
+		}
 	}
 
 	return nil
@@ -230,7 +223,10 @@ func (b *paymentBiz) VerifyInAppPurchase(ctx context.Context, req *PaymentVerify
 		return nil, fmt.Errorf("invalid in-app purchase")
 	} else {
 		fmt.Println("[VerifyInAppPurchase] processCoinPackagePayment with ProductID:", res.ProductID)
-		b.processCoinPackagePayment(ctx, req, res)
+		if err := b.processCoinPackagePayment(ctx, req, res); err != nil {
+			fmt.Println("[VerifyInAppPurchase] processCoinPackagePayment error:", err)
+			return nil, err
+		}
 	}
 
 	fmt.Println("[VerifyInAppPurchase] returning ProductID:", res.ProductID)
@@ -242,6 +238,21 @@ func (b *paymentBiz) VerifyInAppPurchase(ctx context.Context, req *PaymentVerify
 func (b *paymentBiz) processCoinPackagePayment(ctx context.Context, req *PaymentVerifyRequest, res *iap.IAPVerifyInAppPurchaseRes) error {
 
 	coinPackage, err := b.coinPackageRepo.GetByIOSProductID(ctx, res.ProductID)
+	if err != nil {
+		return fmt.Errorf("failed to get coin package: %w", err)
+	}
+
+	existing, err := b.paymentTransactionRepo.GetByTransactionID(ctx, req.TransactionID)
+	if err != nil {
+		return fmt.Errorf("failed to check payment transaction: %w", err)
+	}
+	if existing != nil {
+		if existing.Status == model.PaymentStatusSuccess {
+			return nil
+		}
+		existing.Status = model.PaymentStatusSuccess
+		return b.addCoinsToUserAccount(ctx, existing)
+	}
 
 	snapshot := model.JSONMap{
 		"package_id":          coinPackage.PackageID,
@@ -263,7 +274,7 @@ func (b *paymentBiz) processCoinPackagePayment(ctx context.Context, req *Payment
 		Provider:          "ios",
 		ProviderPaymentID: req.TransactionID,
 		PaymentType:       model.PaymentTypeCoinPackage,
-		Status:            model.PaymentStatusPending,
+		Status:            model.PaymentStatusSuccess,
 		RelatedID:         coinPackage.PackageID,
 		RelatedType:       model.RelatedTypeCoinPackage,
 		Snapshot:          snapshot,
