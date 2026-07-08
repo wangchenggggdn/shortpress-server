@@ -123,3 +123,15 @@ type UserChangeStatusRequest struct {
 	// 127: delete - User is deleted
 	Status int8 `json:"status" binding:"required"` // Allowed: 2=activate, 3=forbidden, 127=delete
 }
+
+// UserResetPasswordRequest represents a request to reset a site user's password.
+type UserResetPasswordRequest struct {
+	SiteID string `json:"siteId" binding:"required"`
+	Email  string `json:"email" binding:"required,email"`
+}
+
+// UserResetPasswordResponseData contains the generated credentials after reset.
+type UserResetPasswordResponseData struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}

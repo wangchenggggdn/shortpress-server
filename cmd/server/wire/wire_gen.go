@@ -61,6 +61,7 @@ func NewWire(viperViper *viper.Viper, logger *log.Logger) (*app.App, func(), err
 	siteSeoRepository := site.NewSiteSeoRepository(repository)
 	sitePlaylistsRepository := site.NewSitePlaylistRepository(repository)
 	userRepository := user.NewUserRepository(repository)
+	userAuthRepository := user.NewUserAuthRepository(repository)
 	userCoinsRepository := payment.NewUserCoinsRepository(repository)
 	paymentTransactionRepository := payment.NewPaymentTransactionRepository(repository)
 	siteBuilderDataRepository := site.NewSiteBuilderDataRepository(repository)
@@ -69,7 +70,7 @@ func NewWire(viperViper *viper.Viper, logger *log.Logger) (*app.App, func(), err
 	if err != nil {
 		return nil, nil, err
 	}
-	siteService := service.NewSiteService(serviceService, siteRepository, siteSeoRepository, sitePlaylistsRepository, creatorSiteRepository, playlistRepository, userRepository, userCoinsRepository, paymentTransactionRepository, siteBuilderDataRepository, sitePageTemplateRepository, blacklistBlacklist)
+	siteService := service.NewSiteService(serviceService, siteRepository, siteSeoRepository, sitePlaylistsRepository, creatorSiteRepository, playlistRepository, userRepository, userAuthRepository, userCoinsRepository, paymentTransactionRepository, siteBuilderDataRepository, sitePageTemplateRepository, blacklistBlacklist)
 	siteHandler := handler.NewSiteHandler(handlerHandler, siteService)
 	sitePageConfigRepository := site.NewSitePageConfigRepository(repository)
 	sitePageConfigService := service.NewSitePageConfigService(serviceService, sitePageConfigRepository)
@@ -95,7 +96,6 @@ func NewWire(viperViper *viper.Viper, logger *log.Logger) (*app.App, func(), err
 	adsService := service.NewAdsService(serviceService, adRepository, adLocationRepository)
 	adsHandler := handler.NewAdsHandler(handlerHandler, adsService)
 	userProfileRepository := user.NewUserProfileRepository(repository)
-	userAuthRepository := user.NewUserAuthRepository(repository)
 	userService := service.NewUserService(serviceService, userRepository, userProfileRepository, userAuthRepository, siteRepository, userCoinsRepository, paymentTransactionRepository)
 	userHandler := handler.NewUserHandler(handlerHandler, userService)
 	stripeClient := stripe.NewClient()

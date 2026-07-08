@@ -588,3 +588,46 @@ func (h *SiteHandler) UserChangeStatus(ctx *gin.Context) {
 	// 5. Return success response
 	api.HandleSuccess(ctx, nil)
 }
+
+// UserResetPassword godoc
+// @Summary Reset site user password
+// @Schemes
+// @Description Generate a new password for a site user and return it to the creator.
+// @Tags site
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param Authorization header string true "Bearer user token"
+// @Param request body api.UserResetPasswordRequest true "Parameters for resetting user password"
+// @Success 200 {object} api.UserResetPasswordResponseData "Password reset successfully"
+// @Failure 400 {object} api.Response "Bad request"
+// @Failure 401 {object} api.Response "Unauthorized"
+// @Failure 404 {object} api.Response "User not found"
+// @Failure 500 {object} api.Response "Internal server error"
+// @Router /api/site/user/reset/password [post]
+func (h *SiteHandler) UserResetPassword(ctx *gin.Context) {
+	creatorID := ctx.GetString("creator_id")
+	if creatorID == "" {
+		api.HandleErrorWithHttpCode(ctx, http.StatusUnauthorized, common.ErrUnauthorized, nil)
+		return
+	}
+
+	var req api.UserResetPasswordRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		api.HandleErrorWithHttpCode(ctx, http.StatusBadRequest, err, nil)
+		return
+	}
+
+	result, err := h.siteService.ResetUserPassword(ctx, req.SiteID, req.Email)
+	if err != nil {
+		if errors.Is(err, common.ErrUserNotFound) {
+			api.HandleError(ctx, common.ErrUserNotFound, nil)
+			return
+		}
+		log.Error(ctx, "reset user password failed: "+err.Error())
+		api.HandleError(ctx, err, nil)
+		return
+	}
+
+	api.HandleSuccess(ctx, result)
+}

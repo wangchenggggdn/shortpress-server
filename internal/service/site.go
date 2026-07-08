@@ -2,9 +2,11 @@ package service
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
 	"net"
 	"shortpress-server/internal/api"
 	"shortpress-server/internal/common"
@@ -18,10 +20,13 @@ import (
 	"shortpress-server/pkg/blacklist"
 	"shortpress-server/pkg/log"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-sql-driver/mysql"
 	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 type SiteService interface {
@@ -35,6 +40,7 @@ type SiteService interface {
 	GetSiteUsers(ctx *gin.Context, query *model.UserQuery, page, pageSize, sortType int) ([]*api.UserInfo, int64, error)
 	GetSiteUserInfo(ctx *gin.Context, siteID, userID, email string) (*api.UserInfo, error)
 	ChangeUserStatus(ctx *gin.Context, siteID string, email string, status int8) error
+	ResetUserPassword(ctx *gin.Context, siteID string, email string) (*api.UserResetPasswordResponseData, error)
 	PathExists(ctx *gin.Context, path string) (bool, error)
 }
 
@@ -46,6 +52,7 @@ func NewSiteService(
 	creatorSiteRepository creator.CreatorSiteRepository,
 	playlistRepository playlist.PlaylistRepository,
 	userRepository user.UserRepository,
+	userAuthRepository user.UserAuthRepository,
 	userCoinsRepository payment.UserCoinsRepository,
 	paymentTransactionRepo payment.PaymentTransactionRepository,
 	siteBuilderDataRepository site.SiteBuilderDataRepository,
@@ -59,6 +66,7 @@ func NewSiteService(
 		siteSeoRepository:          siteSeoRepository,
 		sitePlaylistRepository:     sitePlaylistRepository,
 		userRepository:             userRepository,
+		userAuthRepository:         userAuthRepository,
 		creatorSiteRepository:      creatorSiteRepository,
 		playlistRepository:         playlistRepository,
 		userCoinsRepository:        userCoinsRepository,
@@ -77,6 +85,7 @@ type siteService struct {
 	creatorSiteRepository      creator.CreatorSiteRepository
 	playlistRepository         playlist.PlaylistRepository
 	userRepository             user.UserRepository
+	userAuthRepository         user.UserAuthRepository
 	userCoinsRepository        payment.UserCoinsRepository
 	paymentTransactionRepo     payment.PaymentTransactionRepository
 	siteBuilderDataRepository  site.SiteBuilderDataRepository
@@ -514,6 +523,76 @@ func (s *siteService) GetSiteUserInfo(ctx *gin.Context, siteID, userID, email st
 		return nil, common.ErrUserNotFound
 	}
 	return users[0], nil
+}
+
+func generateRandomPassword(length int) (string, error) {
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	password := make([]byte, length)
+	for i := range password {
+		n, err := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
+		if err != nil {
+			return "", err
+		}
+		password[i] = charset[n.Int64()]
+	}
+	return string(password), nil
+}
+
+// ResetUserPassword generates a new password for a site user and updates their email auth.
+func (s *siteService) ResetUserPassword(ctx *gin.Context, siteID string, email string) (*api.UserResetPasswordResponseData, error) {
+	email = strings.TrimSpace(email)
+	if email == "" {
+		return nil, fmt.Errorf("email is required")
+	}
+
+	user, err := s.userRepository.GetByEmailAndSiteID(ctx, email, siteID)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil {
+		return nil, common.ErrUserNotFound
+	}
+	if user.Status == model.UserStatusDeleted {
+		return nil, common.ErrUserNotFound
+	}
+
+	newPassword, err := generateRandomPassword(12)
+	if err != nil {
+		return nil, err
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+
+	userAuth, err := s.userAuthRepository.GetByUserIDAndType(ctx, user.UserID, model.AuthTypeEmail)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
+	}
+
+	if userAuth != nil {
+		if err := s.userAuthRepository.UpdatePassword(ctx, user.UserID, string(hash)); err != nil {
+			return nil, err
+		}
+	} else {
+		userAuth = &model.UserAuth{
+			UserID:       user.UserID,
+			Type:         model.AuthTypeEmail,
+			Identifier:   email,
+			PasswordHash: string(hash),
+			CreatedAt:    time.Now(),
+			UpdatedAt:    time.Now(),
+		}
+		if err := s.userAuthRepository.Create(ctx, userAuth); err != nil {
+			return nil, err
+		}
+	}
+
+	return &api.UserResetPasswordResponseData{
+		Email:    email,
+		Password: newPassword,
+	}, nil
 }
 
 // ChangeUserStatus changes a user's status or deletes them if status is UserStatusDeleted

@@ -137,6 +137,7 @@ func registerSiteRoutes(apiGroup *gin.RouterGroup, siteHandler *handler.SiteHand
 		siteGroup.GET("/list", siteHandler.List)
 		siteGroup.GET("/user/list", siteHandler.UserList)
 		siteGroup.POST("/user/change/status", siteHandler.UserChangeStatus)
+		siteGroup.POST("/user/reset/password", siteHandler.UserResetPassword)
 		siteGroup.GET("/user/info", siteHandler.UserInfo)
 	}
 }
