@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"shortpress-server/pkg/oauth2"
 	"strings"
@@ -19,6 +20,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 // UserService defines the operations for user management
@@ -28,6 +30,7 @@ type UserService interface {
 	LoginByOAuth2(ctx *gin.Context, req *api.UserLoginByAuthRequest, siteID string) (string, string, error)
 	GetUserProfile(ctx *gin.Context, userID string) (*api.UserProfileData, error)
 	ModifyUserProfile(ctx *gin.Context, userID string, req *api.UserProfileModifyRequest) error
+	ChangePassword(ctx *gin.Context, userID string, newPassword string) error
 	SyncMetaClick(ctx *gin.Context, userID string, req *api.MetaClickSyncRequest) error
 	SyncPixel(ctx *gin.Context, userID string, req *api.PixelSyncRequest) (*api.PixelSyncResponseData, error)
 }
@@ -534,6 +537,46 @@ func (s *userService) defaultPixelIDForSite(ctx context.Context, siteID string) 
 		return "", nil
 	}
 	return strings.TrimSpace(*siteRow.FacebookPixelID), nil
+}
+
+// ChangePassword updates the password for an email-authenticated user.
+func (s *userService) ChangePassword(ctx *gin.Context, userID string, newPassword string) error {
+	user, err := s.userRepository.GetByUserID(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if user == nil {
+		return common.ErrUserNotFound
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	userAuth, err := s.userAuthRepository.GetByUserIDAndType(ctx, userID, model.AuthTypeEmail)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return err
+	}
+
+	if userAuth != nil {
+		return s.userAuthRepository.UpdatePassword(ctx, userID, string(hash))
+	}
+
+	identifier := user.Email
+	if identifier == "" {
+		return common.ErrUserAuthNotFound
+	}
+
+	userAuth = &model.UserAuth{
+		UserID:       userID,
+		Type:         model.AuthTypeEmail,
+		Identifier:   identifier,
+		PasswordHash: string(hash),
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
+	}
+	return s.userAuthRepository.Create(ctx, userAuth)
 }
 
 // ModifyUserProfile modifies the profile information for a user

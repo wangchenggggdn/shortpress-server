@@ -104,3 +104,8 @@ type UserProfileModifyRequest struct {
 	Nickname   string `json:"nickname,omitempty"`   // Use pointer to allow optional field
 	AutoUnlock *bool  `json:"autoUnlock,omitempty"` // Use pointer to allow optional field
 }
+
+// UserChangePasswordRequest represents the request for changing user password.
+type UserChangePasswordRequest struct {
+	NewPassword string `json:"newPassword" binding:"required,min=6,max=64"`
+}

@@ -225,6 +225,42 @@ func (h *UserHandler) ProfileModify(ctx *gin.Context) {
 	api.HandleSuccess(ctx, nil)
 }
 
+// ChangePassword godoc
+// @Summary Change user password
+// @Schemes
+// @Description Change password for the authenticated email user
+// @Tags user
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param X-Site-Id header string true "Site ID"
+// @Param Authorization header string true "Bearer user token"
+// @Param request body api.UserChangePasswordRequest true "Change password parameters"
+// @Success 200 {object} api.Response "Password changed successfully"
+// @Router /api/user/change-password [post]
+func (h *UserHandler) ChangePassword(ctx *gin.Context) {
+	var req api.UserChangePasswordRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		api.HandleErrorWithHttpCode(ctx, http.StatusBadRequest, err, nil)
+		return
+	}
+
+	userID := ctx.GetString("user_id")
+	if userID == "" {
+		api.HandleErrorWithHttpCode(ctx, http.StatusUnauthorized, common.ErrUnauthorized, nil)
+		return
+	}
+
+	err := h.userService.ChangePassword(ctx, userID, req.NewPassword)
+	if err != nil {
+		log.Error(ctx, "failed to change user password: "+err.Error())
+		api.HandleError(ctx, err, nil)
+		return
+	}
+
+	api.HandleSuccess(ctx, nil)
+}
+
 // SyncMetaClick godoc
 // @Summary Sync Meta fbc/fbp click ids
 // @Description Persist Meta click ids on the user for CAPI Purchase attribution
