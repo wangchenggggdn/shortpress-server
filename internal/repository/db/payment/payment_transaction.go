@@ -18,7 +18,7 @@ type PaymentTransactionRepository interface {
 	MarkSuccessIfPending(ctx context.Context, transactionID, providerPaymentID, payerEmail string) (bool, error)
 	ListBySiteIDAndTimeRange(ctx context.Context, siteID string, userID string, emailSearch string, startTime, endTime time.Time, limit, offset int) ([]*model.PaymentTransactionView, error)
 	CountBySiteIDAndTimeRange(ctx context.Context, siteID string, userID string, emailSearch string, startTime, endTime time.Time) (int64, error)
-	GetDailyIncomeStatistics(ctx context.Context, siteID string, startTime, endTime time.Time) ([]*model.DailyIncomeStatistics, error)
+	GetDailyIncomeStatistics(ctx context.Context, siteID string, startTime, endTime time.Time, timezoneOffsetMinutes *int) ([]*model.DailyIncomeStatistics, error)
 	GetUserTotalAmount(ctx context.Context, userID string, siteID string, startTime, endTime time.Time) (int64, error)
 	ListUserPurchases(ctx context.Context, userID string, siteID string, page, pageSize int) ([]*model.PaymentTransaction, int64, error)
 	HasUserPurchased(ctx context.Context, userID string, siteID string) (bool, error)
@@ -160,8 +160,12 @@ func (r *paymentTransactionRepository) CountBySiteIDAndTimeRange(ctx context.Con
 	return count, err
 }
 
-// GetDailyIncomeStatistics retrieves daily income statistics for a site within a time range
-func (r *paymentTransactionRepository) GetDailyIncomeStatistics(ctx context.Context, siteID string, startTime, endTime time.Time) ([]*model.DailyIncomeStatistics, error) {
+// GetDailyIncomeStatistics retrieves daily income statistics for a site within a time range.
+// timezoneOffsetMinutes is minutes east of UTC for the calendar day used to bucket revenue
+// (e.g. UTC+8 => 480, UTC-7 => -420). When nil, dates are bucketed with DATE(created_at)
+// (existing behavior: app/DB local wall clock via DSN loc=Local).
+// When set, created_at is shifted by (targetOffset - storageOffset) before DATE().
+func (r *paymentTransactionRepository) GetDailyIncomeStatistics(ctx context.Context, siteID string, startTime, endTime time.Time, timezoneOffsetMinutes *int) ([]*model.DailyIncomeStatistics, error) {
 	var statistics []*model.DailyIncomeStatistics
 
 	// Renewal: Stripe invoice id on provider_payment_id (must start with "in_").
@@ -177,13 +181,23 @@ func (r *paymentTransactionRepository) GetDailyIncomeStatistics(ctx context.Cont
 	isIAP := fmt.Sprintf(`(%s AND NOT (%s) AND (related_type = %d OR payment_type = %d))`,
 		notRenewal, isSubscriptionOrder, model.RelatedTypeCoinPackage, model.PaymentTypeCoinPackage)
 
+	dateExpr := "DATE(created_at)"
+	if timezoneOffsetMinutes != nil {
+		_, storageOffsetSec := time.Now().Zone()
+		dayShiftMinutes := *timezoneOffsetMinutes - storageOffsetSec/60
+		if dayShiftMinutes != 0 {
+			dateExpr = fmt.Sprintf("DATE(DATE_ADD(created_at, INTERVAL %d MINUTE))", dayShiftMinutes)
+		}
+	}
+
 	query := r.DB(ctx).Model(&model.PaymentTransaction{}).
-		Select(fmt.Sprintf(`DATE(created_at) as date,
+		Select(fmt.Sprintf(`%s as date,
 			SUM(amount) as total_amount,
 			COUNT(*) as transaction_count,
 			SUM(CASE WHEN %s THEN amount ELSE 0 END) as renewal_amount,
 			SUM(CASE WHEN %s THEN amount ELSE 0 END) as subscription_amount,
 			SUM(CASE WHEN %s THEN amount ELSE 0 END) as iap_amount`,
+			dateExpr,
 			isRenewal,
 			isNewSubscription,
 			isIAP)).
@@ -197,7 +211,7 @@ func (r *paymentTransactionRepository) GetDailyIncomeStatistics(ctx context.Cont
 		query = query.Where("created_at <= ?", endTime)
 	}
 
-	err := query.Group("DATE(created_at)").
+	err := query.Group(dateExpr).
 		Order("date DESC").
 		Find(&statistics).Error
 

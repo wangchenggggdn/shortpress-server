@@ -172,12 +172,26 @@ func (h *AnalyticsHandler) IncomStatistics(ctx *gin.Context) {
 	startTime := time.Unix(req.StartTime, 0)
 	endTime := time.Unix(req.EndTime, 0)
 
+	var timezoneOffsetMinutes *int
+	if req.TimezoneOffset != nil {
+		offset := *req.TimezoneOffset
+		// Clamp to valid civil timezone range (±14h)
+		if offset > 14*60 {
+			offset = 14 * 60
+		}
+		if offset < -14*60 {
+			offset = -14 * 60
+		}
+		timezoneOffsetMinutes = &offset
+	}
+
 	// Call service to get income statistics
 	response, err := h.analyticsService.GetIncomeStatistics(
 		ctx,
 		req.SiteID,
 		startTime,
 		endTime,
+		timezoneOffsetMinutes,
 	)
 
 	if err != nil {

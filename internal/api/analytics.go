@@ -34,6 +34,9 @@ type IncomeStatisticsRequest struct {
 	SiteID    string `json:"siteId" binding:"required"`
 	StartTime int64  `json:"startTime"` // Optional start timestamp
 	EndTime   int64  `json:"endTime"`   // Optional end timestamp
+	// TimezoneOffset is minutes east of UTC used to bucket daily revenue
+	// (e.g. UTC+8 => 480, UTC-7 => -420). Omit / 0 means UTC.
+	TimezoneOffset *int `json:"timezoneOffset"`
 }
 
 type DailyIncomeStatistics struct {

@@ -18,8 +18,9 @@ import (
 type AnalyticsService interface {
 	// GetPaymentTransactions retrieves payment transactions for a site within a time range
 	GetPaymentTransactions(ctx *gin.Context, siteID string, userID string, userEmail string, startTime, endTime time.Time, page, pageSize int) (*api.IncomeTransactionHistoryResponse, error)
-	// GetIncomeStatistics retrieves daily income statistics for a site within a time range
-	GetIncomeStatistics(ctx *gin.Context, siteID string, startTime, endTime time.Time) (*api.IncomeStatisticsResponse, error)
+	// GetIncomeStatistics retrieves daily income statistics for a site within a time range.
+	// timezoneOffsetMinutes is minutes east of UTC used to bucket calendar days; nil keeps DATE(created_at).
+	GetIncomeStatistics(ctx *gin.Context, siteID string, startTime, endTime time.Time, timezoneOffsetMinutes *int) (*api.IncomeStatisticsResponse, error)
 	// GetTransactionByID retrieves a specific payment transaction by its ID
 	GetTransactionByID(ctx *gin.Context, transactionID string) (*api.IncomeTransactionDetailResponse, error)
 }
@@ -137,10 +138,14 @@ func (s *analyticsService) GetIncomeStatistics(
 	siteID string,
 	startTime,
 	endTime time.Time,
+	timezoneOffsetMinutes *int,
 ) (*api.IncomeStatisticsResponse, error) {
 	// Add business context logging
 	log.AddNotice(ctx, "target_site_id", siteID)
 	log.AddNotice(ctx, "time_range", fmt.Sprintf("%s to %s", startTime.Format("2006-01-02"), endTime.Format("2006-01-02")))
+	if timezoneOffsetMinutes != nil {
+		log.AddNotice(ctx, "timezone_offset_minutes", fmt.Sprintf("%d", *timezoneOffsetMinutes))
+	}
 
 	// Get daily statistics from repository
 	stats, err := s.paymentTransactionRepo.GetDailyIncomeStatistics(
@@ -148,6 +153,7 @@ func (s *analyticsService) GetIncomeStatistics(
 		siteID,
 		startTime,
 		endTime,
+		timezoneOffsetMinutes,
 	)
 	if err != nil {
 		log.Error(ctx, fmt.Sprintf("Failed to get daily income statistics for site %s: %v", siteID, err))
