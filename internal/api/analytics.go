@@ -16,6 +16,7 @@ type IncomeTransactionItem struct {
 	TransactionID string      `json:"transactionId"`
 	Email         string      `json:"email"`
 	PayerEmail    string      `json:"payerEmail"`
+	PixelID       string      `json:"pixelId"`
 	Name          string      `json:"name"`
 	Amount        types.Money `json:"amount"`
 	Provider      string      `json:"provider"`

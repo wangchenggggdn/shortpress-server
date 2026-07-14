@@ -112,6 +112,7 @@ func (s *analyticsService) GetPaymentTransactions(
 			Name:          name,
 			Email:         tx.Email,
 			PayerEmail:    tx.PayerEmail,
+			PixelID:       tx.PixelID,
 			Amount:        types.FromCents(tx.Amount),
 			Provider:      tx.Provider,
 			Description:   tx.ErrorMessage,
