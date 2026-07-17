@@ -403,15 +403,15 @@ func (b *paymentBiz) getIapService(ctx context.Context, account string) (svc iap
 
 	// 通过account查询对应的配置信息
 	option := map[string]string{
-		"key_id": "M7AP3ZSCFL",
+		"key_id": "7468M4H8G7",
 		"key_content": `-----BEGIN PRIVATE KEY-----
-MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQgyWLJ9cqM041Opvso
-UWYm7uyzgxUXR66adWnHGKuuI12gCgYIKoZIzj0DAQehRANCAASfWPOIImjOV9O1
-HEfXM0sN6Vm6Jx9jS3V1lU8GKvmMdYJZIleWGnzoFAHf9a1dDQEGYeOWsoiP1S+2
-MbZ13+R6
+MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQgB6d2DHcIX4f1apMQ
+Y4UusledT/KUJrgeOv4R/aNcXNegCgYIKoZIzj0DAQehRANCAAT2yGD+2qymv8i8
+Yv12lglCTFsO/0N7SPlVw1j5CZb3cocPbgqMxNaG72f1By2bf0alS3TzY5ngiT5z
+UO35W7fo
 -----END PRIVATE KEY-----`,
-		"bundle_id": "super.smart.photo.cleaner.pro",
-		"issuer":    "4beb7e54-4675-4c65-89ec-081940277d7e",
+		"bundle_id": "com.pixiflow.ai.phototovideo",
+		"issuer":    "b9d7fdea-8db2-4264-9fa7-1b3ba0a4d659",
 	}
 	svc, err = iap.GetService("apple", option)
 	if err != nil {

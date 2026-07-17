@@ -458,7 +458,12 @@ func registerIapRoutes(apiGroup *gin.RouterGroup, iapHandler *handler.IapHandler
 		//ios android
 		iapGroup.POST("/verifysub", iapHandler.VerifySub)
 		iapGroup.POST("/verify", iapHandler.Verify)
-		iapGroup.POST("/notify", iapHandler.Notify)
+	}
+
+	// Apple / Google server notifications (no user JWT)
+	iapNoAuthGroup := apiGroup.Group("/iap")
+	{
+		iapNoAuthGroup.POST("/notify", iapHandler.Notify)
 	}
 }
 
