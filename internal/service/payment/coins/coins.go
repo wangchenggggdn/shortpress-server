@@ -179,6 +179,15 @@ func (s *coinsService) AddCoinsByPayment(ctx context.Context, amount int, source
 		return nil, errors.New("payment transaction is nil")
 	}
 
+	// Idempotent: one payment order grants coins at most once
+	existing, err := s.coinTransactionRepo.GetByRelatedIDAndType(ctx, paymentTran.TransactionID, model.CoinRelatedTypePayment)
+	if err != nil {
+		return nil, err
+	}
+	if existing != nil {
+		return existing, nil
+	}
+
 	return s.AddCoins(ctx, &CoinAdditionParams{
 		UserID: paymentTran.UserID,
 		SiteID: paymentTran.SiteID,

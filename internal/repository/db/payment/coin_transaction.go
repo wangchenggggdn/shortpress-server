@@ -13,6 +13,7 @@ import (
 type CoinTransactionRepository interface {
 	db.BaseOperation
 	GetByTransactionID(ctx context.Context, transactionID string) (*model.CoinTransaction, error)
+	GetByRelatedIDAndType(ctx context.Context, relatedID string, relatedType int) (*model.CoinTransaction, error)
 	ListByUserID(ctx context.Context, userID string, limit, offset int) ([]*model.CoinTransaction, error)
 	ListAddCoionsByUserID(ctx context.Context, userID string, limit, offset int) ([]*model.CoinTransaction, error)
 	CountByUserID(ctx context.Context, userID string) (int64, error)
@@ -44,6 +45,18 @@ func (r *coinTransactionRepository) Update(ctx context.Context, entity interface
 func (r *coinTransactionRepository) GetByTransactionID(ctx context.Context, transactionID string) (*model.CoinTransaction, error) {
 	var tx model.CoinTransaction
 	err := r.DB(ctx).Where("transaction_id = ?", transactionID).First(&tx).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &tx, nil
+}
+
+func (r *coinTransactionRepository) GetByRelatedIDAndType(ctx context.Context, relatedID string, relatedType int) (*model.CoinTransaction, error) {
+	var tx model.CoinTransaction
+	err := r.DB(ctx).Where("related_id = ? AND related_type = ?", relatedID, relatedType).First(&tx).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil

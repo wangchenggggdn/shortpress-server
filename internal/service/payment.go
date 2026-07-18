@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"shortpress-server/internal/model"
@@ -247,10 +248,13 @@ func (b *paymentBiz) processCoinPackagePayment(ctx context.Context, req *Payment
 		return fmt.Errorf("failed to check payment transaction: %w", err)
 	}
 	if existing != nil {
-		if existing.Status == model.PaymentStatusSuccess {
-			return nil
+		if existing.Status != model.PaymentStatusSuccess {
+			existing.Status = model.PaymentStatusSuccess
+			if err := b.paymentTransactionRepo.Update(ctx, existing); err != nil {
+				return fmt.Errorf("failed to update payment transaction: %w", err)
+			}
 		}
-		existing.Status = model.PaymentStatusSuccess
+		// Retry-safe: AddCoinsByPayment is idempotent by payment transaction id
 		return b.addCoinsToUserAccount(ctx, existing)
 	}
 
@@ -303,16 +307,40 @@ func (b *paymentBiz) addCoinsToUserAccount(ctx context.Context, transaction *mod
 		return errors.New("invalid coin amount in transaction snapshot")
 	}
 
-	// Convert to int for coin operations
-	coins := int(coinAmount.(float64))
+	coins, err := snapshotInt(coinAmount)
+	if err != nil {
+		return fmt.Errorf("invalid coin amount in transaction snapshot: %w", err)
+	}
 	if coins <= 0 {
 		return errors.New("coin amount must be positive")
 	}
-	_, err := b.coinsService.AddCoinsByPayment(ctx, coins, "ios", transaction)
+	_, err = b.coinsService.AddCoinsByPayment(ctx, coins, "ios", transaction)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+// snapshotInt converts JSON/map numeric values (int or float64) to int.
+// In-memory snapshots store Go ints; values reloaded from JSON become float64.
+func snapshotInt(v interface{}) (int, error) {
+	switch n := v.(type) {
+	case int:
+		return n, nil
+	case int32:
+		return int(n), nil
+	case int64:
+		return int(n), nil
+	case float32:
+		return int(n), nil
+	case float64:
+		return int(n), nil
+	case json.Number:
+		i, err := n.Int64()
+		return int(i), err
+	default:
+		return 0, fmt.Errorf("unsupported type %T", v)
+	}
 }
 
 func (b *paymentBiz) Notify(ctx context.Context, req *PaymentNotifyRequest) (*Empty, error) {
