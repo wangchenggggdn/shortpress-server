@@ -113,6 +113,7 @@ func (s *analyticsService) GetPaymentTransactions(
 			Email:         tx.Email,
 			PayerEmail:    tx.PayerEmail,
 			PixelID:       tx.PixelID,
+			Platform:      tx.Platform,
 			Amount:        types.FromCents(tx.Amount),
 			Provider:      tx.Provider,
 			Description:   tx.ErrorMessage,
@@ -200,10 +201,12 @@ func (s *analyticsService) GetTransactionByID(ctx *gin.Context, transactionID st
 
 	// Get user account email
 	var email string
+	var platform string
 	if transaction.UserID != "" {
 		user, err := s.userRepository.GetByUserID(ctx, transaction.UserID)
 		if err == nil && user != nil {
 			email = user.Email
+			platform = user.Platform
 		} else if err != nil {
 			log.Warning(ctx, fmt.Sprintf("Failed to get user info for transaction %s: %v", transactionID, err))
 
@@ -220,6 +223,7 @@ func (s *analyticsService) GetTransactionByID(ctx *gin.Context, transactionID st
 		UserID:        transaction.UserID,
 		Email:         email,
 		PayerEmail:    transaction.PayerEmail,
+		Platform:      platform,
 		Amount:        types.FromCents(transaction.Amount),
 		Currency:      transaction.Currency,
 		Provider:      transaction.Provider,

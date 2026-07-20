@@ -17,6 +17,7 @@ type IncomeTransactionItem struct {
 	Email         string      `json:"email"`
 	PayerEmail    string      `json:"payerEmail"`
 	PixelID       string      `json:"pixelId"`
+	Platform      string      `json:"platform"`
 	Name          string      `json:"name"`
 	Amount        types.Money `json:"amount"`
 	Provider      string      `json:"provider"`
@@ -60,6 +61,7 @@ type IncomeTransactionDetailResponse struct {
 	UserID              string      `json:"userId"`
 	Email               string      `json:"email"`
 	PayerEmail          string      `json:"payerEmail"`
+	Platform            string      `json:"platform"`
 	Amount              types.Money `json:"amount"`
 	Currency            string      `json:"currency"`
 	Provider            string      `json:"provider"`

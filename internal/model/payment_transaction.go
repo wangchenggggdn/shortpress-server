@@ -47,8 +47,9 @@ type PaymentTransaction struct {
 
 type PaymentTransactionView struct {
 	PaymentTransaction
-	Email   string `gorm:"column:email"`
-	PixelID string `gorm:"column:pixel_id"`
+	Email    string `gorm:"column:email"`
+	PixelID  string `gorm:"column:pixel_id"`
+	Platform string `gorm:"column:platform"`
 }
 
 // DailyIncomeStatistics represents daily income statistics from the database
