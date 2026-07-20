@@ -320,6 +320,9 @@ func (s *userService) register(ctx *gin.Context, args *registerArgs) (string, er
 	}
 	log.AddNotice(ctx, "pixel_id", pixelID)
 
+	platform := strings.ToLower(strings.TrimSpace(ctx.GetHeader("X-Client-Type")))
+	log.AddNotice(ctx, "platform", platform)
+
 	// Create user model
 	now := time.Now()
 	user := &model.User{
@@ -332,6 +335,7 @@ func (s *userService) register(ctx *gin.Context, args *registerArgs) (string, er
 		UpdatedAt:   time.Now(),
 		Referer:     referer,
 		PixelID:     pixelID,
+		Platform:    platform,
 		LastLoginAt: &now,
 		Ver:         appVersion,
 	}

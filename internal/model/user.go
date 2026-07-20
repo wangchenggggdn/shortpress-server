@@ -19,6 +19,7 @@ type User struct {
 	PremiumExpiresAt *time.Time `gorm:"column:premium_expires_at" json:"premium_expires_at,omitempty"`
 	Referer              string     `gorm:"column:referer" json:"referer"`
 	PixelID              string     `gorm:"column:pixel_id" json:"pixelId"`
+	Platform             string     `gorm:"column:platform" json:"platform"` // web / ios / android, from X-Client-Type
 	MetaFbc              string     `gorm:"column:meta_fbc" json:"metaFbc"`
 	MetaFbp              string     `gorm:"column:meta_fbp" json:"metaFbp"`
 	MetaFbclid           string     `gorm:"column:meta_fbclid" json:"metaFbclid"`
