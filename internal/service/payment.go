@@ -92,6 +92,7 @@ func NewPaymentBiz(
 		coinsService:           coinsService,
 		userCoinsRepository:    userCoinsRepository,
 		coinPackageRepo:        coinPackageRepo,
+		subPackageRepo:         subPackageRepo,
 		paymentTransactionRepo: paymentTransactionRepo,
 	}
 }
@@ -139,6 +140,9 @@ func (b *paymentBiz) processSubscriptionPayment(ctx context.Context, req *Paymen
 	subPackage, err := b.subPackageRepo.GetByIOSProductID(ctx, res.ProductID)
 	if err != nil {
 		return fmt.Errorf("failed to get subscription package: %w", err)
+	}
+	if subPackage == nil {
+		return fmt.Errorf("subscription package not found for ios product: %s", res.ProductID)
 	}
 
 	userSubscription := &model.UserSubscription{
