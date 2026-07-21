@@ -73,3 +73,37 @@ type IncomeTransactionDetailResponse struct {
 	IsSubscriptionOrder bool        `json:"isSubscriptionOrder"`
 	SubscriptionID      string      `json:"subscriptionId,omitempty"`
 }
+
+type CreationsRequest struct {
+	SiteID   string `json:"siteId" binding:"required"`
+	Page     int    `json:"page"`
+	PageSize int    `json:"pageSize"`
+}
+
+type CreationVideo struct {
+	URL      string `json:"url"`
+	CoverURL string `json:"coverUrl,omitempty"`
+}
+
+type CreationRecordItem struct {
+	TaskID          string          `json:"taskId"`
+	Status          int32           `json:"status"`
+	Model           string          `json:"model"`
+	VideoID         string          `json:"videoId,omitempty"`
+	SiteID          string          `json:"siteId,omitempty"`
+	UserID          string          `json:"userId,omitempty"`
+	Prompt          string          `json:"prompt,omitempty"`
+	ReferenceImages []string        `json:"referenceImages,omitempty"`
+	Videos          []CreationVideo `json:"videos,omitempty"`
+	Images          []string        `json:"images,omitempty"`
+	ErrorMsg        string          `json:"errorMsg,omitempty"`
+	CreatedAt       int64           `json:"createdAt"`
+	UpdatedAt       int64           `json:"updatedAt"`
+}
+
+type CreationsResponse struct {
+	Items    []*CreationRecordItem `json:"items"`
+	Total    int64                 `json:"total"`
+	Page     int                   `json:"page"`
+	PageSize int                   `json:"pageSize"`
+}

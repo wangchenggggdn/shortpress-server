@@ -1,17 +1,23 @@
 package service
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
 	"shortpress-server/internal/api"
 	"shortpress-server/internal/model"
 	"shortpress-server/internal/repository/db/payment"
 	"shortpress-server/internal/repository/db/user"
 	"shortpress-server/internal/types"
 	"shortpress-server/pkg/log"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/spf13/viper"
 )
 
 // AnalyticsService handles analytics operations
@@ -23,6 +29,8 @@ type AnalyticsService interface {
 	GetIncomeStatistics(ctx *gin.Context, siteID string, startTime, endTime time.Time, timezoneOffsetMinutes *int) (*api.IncomeStatisticsResponse, error)
 	// GetTransactionByID retrieves a specific payment transaction by its ID
 	GetTransactionByID(ctx *gin.Context, transactionID string) (*api.IncomeTransactionDetailResponse, error)
+	// GetCreations lists recent user creation records for a site from generate Redis.
+	GetCreations(ctx *gin.Context, siteID string, page, pageSize int) (*api.CreationsResponse, error)
 }
 
 type analyticsService struct {
@@ -30,6 +38,8 @@ type analyticsService struct {
 	paymentTransactionRepo payment.PaymentTransactionRepository
 	userRepository         user.UserRepository
 	userSubscriptionRepo   payment.UserSubscriptionRepository
+	generateServiceURL     string
+	httpClient             *http.Client
 }
 
 // NewAnalyticsService creates a new analytics service
@@ -38,12 +48,15 @@ func NewAnalyticsService(
 	paymentTransactionRepo payment.PaymentTransactionRepository,
 	userRepository user.UserRepository,
 	userSubscriptionRepo payment.UserSubscriptionRepository,
+	conf *viper.Viper,
 ) AnalyticsService {
 	return &analyticsService{
 		Service:                service,
 		paymentTransactionRepo: paymentTransactionRepo,
 		userRepository:         userRepository,
 		userSubscriptionRepo:   userSubscriptionRepo,
+		generateServiceURL:     strings.TrimRight(conf.GetString("a2e.generate_service_url"), "/"),
+		httpClient:             &http.Client{Timeout: 15 * time.Second},
 	}
 }
 
@@ -264,6 +277,199 @@ func (s *analyticsService) GetTransactionByID(ctx *gin.Context, transactionID st
 	}
 
 	return response, nil
+}
+
+type generateCreationsUpstream struct {
+	Code int `json:"code"`
+	Data struct {
+		Items    []map[string]any `json:"items"`
+		Total    int64            `json:"total"`
+		Page     int              `json:"page"`
+		PageSize int              `json:"page_size"`
+	} `json:"data"`
+	Message string `json:"message"`
+	Error   string `json:"error"`
+}
+
+// GetCreations lists recent user creation records for a site from generate Redis.
+func (s *analyticsService) GetCreations(ctx *gin.Context, siteID string, page, pageSize int) (*api.CreationsResponse, error) {
+	if s.generateServiceURL == "" {
+		return nil, fmt.Errorf("generate service url is not configured")
+	}
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 0 || pageSize > 100 {
+		pageSize = 20
+	}
+
+	q := url.Values{}
+	q.Set("site_id", siteID)
+	q.Set("page", strconv.Itoa(page))
+	q.Set("page_size", strconv.Itoa(pageSize))
+	endpoint := s.generateServiceURL + "/creations?" + q.Encode()
+
+	req, err := http.NewRequestWithContext(ctx.Request.Context(), http.MethodGet, endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+	if auth := ctx.GetHeader("Authorization"); auth != "" {
+		req.Header.Set("Authorization", auth)
+	}
+	req.Header.Set("X-Site-Id", siteID)
+
+	resp, err := s.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("call generate creations failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("generate creations status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var upstream generateCreationsUpstream
+	if err := json.Unmarshal(body, &upstream); err != nil {
+		return nil, fmt.Errorf("decode generate creations failed: %w", err)
+	}
+	if upstream.Code != 0 && upstream.Code != 200 {
+		msg := upstream.Message
+		if msg == "" {
+			msg = upstream.Error
+		}
+		if msg == "" {
+			msg = "generate creations failed"
+		}
+		return nil, fmt.Errorf("%s", msg)
+	}
+
+	items := make([]*api.CreationRecordItem, 0, len(upstream.Data.Items))
+	for _, raw := range upstream.Data.Items {
+		items = append(items, mapCreationRecord(raw))
+	}
+
+	return &api.CreationsResponse{
+		Items:    items,
+		Total:    upstream.Data.Total,
+		Page:     page,
+		PageSize: pageSize,
+	}, nil
+}
+
+func mapCreationRecord(raw map[string]any) *api.CreationRecordItem {
+	item := &api.CreationRecordItem{
+		TaskID:          stringFromAny(raw["task_id"]),
+		Status:          int32FromAny(raw["status"]),
+		Model:           stringFromAny(raw["model"]),
+		VideoID:         stringFromAny(raw["video_id"]),
+		SiteID:          stringFromAny(raw["site_id"]),
+		UserID:          stringFromAny(raw["user_id"]),
+		Prompt:          stringFromAny(raw["prompt"]),
+		ReferenceImages: stringSliceFromAny(raw["reference_images"]),
+		Images:          stringSliceFromAny(raw["images"]),
+		ErrorMsg:        stringFromAny(raw["error_msg"]),
+		CreatedAt:       unixFromAny(raw["created_at"]),
+		UpdatedAt:       unixFromAny(raw["updated_at"]),
+	}
+	if videos, ok := raw["videos"].([]any); ok {
+		for _, v := range videos {
+			switch typed := v.(type) {
+			case map[string]any:
+				item.Videos = append(item.Videos, api.CreationVideo{
+					URL:      stringFromAny(typed["url"]),
+					CoverURL: stringFromAny(typed["cover_url"]),
+				})
+			case string:
+				item.Videos = append(item.Videos, api.CreationVideo{URL: typed})
+			}
+		}
+	}
+	return item
+}
+
+func stringFromAny(v any) string {
+	switch t := v.(type) {
+	case string:
+		return strings.TrimSpace(t)
+	case fmt.Stringer:
+		return strings.TrimSpace(t.String())
+	default:
+		return ""
+	}
+}
+
+func int32FromAny(v any) int32 {
+	switch t := v.(type) {
+	case float64:
+		return int32(t)
+	case int:
+		return int32(t)
+	case int32:
+		return t
+	case int64:
+		return int32(t)
+	case json.Number:
+		i, _ := t.Int64()
+		return int32(i)
+	case string:
+		i, _ := strconv.ParseInt(strings.TrimSpace(t), 10, 32)
+		return int32(i)
+	default:
+		return 0
+	}
+}
+
+func stringSliceFromAny(v any) []string {
+	switch t := v.(type) {
+	case []string:
+		return t
+	case []any:
+		out := make([]string, 0, len(t))
+		for _, item := range t {
+			if s := stringFromAny(item); s != "" {
+				out = append(out, s)
+			}
+		}
+		return out
+	default:
+		return nil
+	}
+}
+
+func unixFromAny(v any) int64 {
+	switch t := v.(type) {
+	case float64:
+		// JSON numbers or unix seconds
+		if t > 1e12 {
+			return int64(t / 1000)
+		}
+		return int64(t)
+	case int64:
+		return t
+	case int:
+		return int64(t)
+	case string:
+		s := strings.TrimSpace(t)
+		if s == "" {
+			return 0
+		}
+		if n, err := strconv.ParseInt(s, 10, 64); err == nil {
+			return n
+		}
+		if tm, err := time.Parse(time.RFC3339Nano, s); err == nil {
+			return tm.Unix()
+		}
+		if tm, err := time.Parse(time.RFC3339, s); err == nil {
+			return tm.Unix()
+		}
+		return 0
+	default:
+		return 0
+	}
 }
 
 func isSubscriptionTransaction(transaction *model.PaymentTransaction) bool {

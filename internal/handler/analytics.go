@@ -202,3 +202,44 @@ func (h *AnalyticsHandler) IncomStatistics(ctx *gin.Context) {
 
 	api.HandleSuccess(ctx, response)
 }
+
+// Creations godoc
+// @Summary List site user creation records
+// @Description List recent user creation records for a site (backed by generate Redis)
+// @Tags analytics
+// @Accept json
+// @Produce json
+// @Param request body api.CreationsRequest true "Query parameters"
+// @Success 200 {object} api.Response{data=api.CreationsResponse} "Return creation records"
+// @Router /api/analytics/creations [post]
+func (h *AnalyticsHandler) Creations(ctx *gin.Context) {
+	creatorID := ctx.GetString("creator_id")
+	if creatorID == "" {
+		api.HandleErrorWithHttpCode(ctx, http.StatusUnauthorized, common.ErrUnauthorized, nil)
+		return
+	}
+
+	var req api.CreationsRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		api.HandleErrorWithHttpCode(ctx, http.StatusBadRequest, err, nil)
+		return
+	}
+
+	log.AddNotice(ctx, "operation", "query_creations")
+
+	if req.Page <= 0 {
+		req.Page = 1
+	}
+	if req.PageSize <= 0 || req.PageSize > 100 {
+		req.PageSize = 20
+	}
+
+	response, err := h.analyticsService.GetCreations(ctx, req.SiteID, req.Page, req.PageSize)
+	if err != nil {
+		log.Error(ctx, fmt.Sprintf("Service error in creations query: %v", err))
+		api.HandleError(ctx, common.ErrInternalServerError, nil)
+		return
+	}
+
+	api.HandleSuccess(ctx, response)
+}

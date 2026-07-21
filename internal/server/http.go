@@ -256,6 +256,8 @@ func registerAnalyticsRoutes(apiGroup *gin.RouterGroup, analyticsHandler *handle
 		analyticsGroup.GET("/income/transactions/info", analyticsHandler.IncomeTransactionsInfo)
 		//Income statistics by day, returns daily income statistics.
 		analyticsGroup.POST("/income/statistics", analyticsHandler.IncomStatistics)
+		//User creation records for the current site (Redis via generate service)
+		analyticsGroup.POST("/creations", analyticsHandler.Creations)
 	}
 }
 

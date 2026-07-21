@@ -109,7 +109,7 @@ func NewWire(viperViper *viper.Viper, logger *log.Logger) (*app.App, func(), err
 	trackingService := analytics.NewTrackingService(viperViper, siteRepository, userRepository)
 	stripeService := stripe2.NewStripeService(serviceService, viperViper, stripeClient, paymentConfigRepository, coinPackageRepository, paymentTransactionRepository, userCoinsRepository, webhookEventRepository, subscriptionPackageRepository, userRepository, userSubscriptionRepository, coinsService, trackingService)
 	paypalService := paypal3.NewPaypalServiceFull(serviceService, viperViper, paymentConfigRepository, coinPackageRepository, paymentTransactionRepository, userCoinsRepository, webhookEventRepository, subscriptionPackageRepository, userRepository, userSubscriptionRepository, coinsService, trackingService)
-	analyticsService := service.NewAnalyticsService(serviceService, paymentTransactionRepository, userRepository, userSubscriptionRepository)
+	analyticsService := service.NewAnalyticsService(serviceService, paymentTransactionRepository, userRepository, userSubscriptionRepository, viperViper)
 	paymentHandler := handler.NewPaymentHandler(handlerHandler, stripeService, paypalService, coinsService, userRepository, analyticsService)
 	coinsHandler := handler.NewCoinsHandler(handlerHandler, coinsService)
 	coinsInternalHandler := handler.NewCoinsInternalHandler(coinsService, logger)
