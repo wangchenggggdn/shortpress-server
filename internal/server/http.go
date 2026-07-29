@@ -279,6 +279,7 @@ func registerUserRoutes(apiGroup *gin.RouterGroup, userHandler *handler.UserHand
 			authUserGroup.POST("/change-password", userHandler.ChangePassword)
 			authUserGroup.POST("/meta-click/sync", userHandler.SyncMetaClick)
 			authUserGroup.POST("/pixel/sync", userHandler.SyncPixel)
+			authUserGroup.POST("/delete-account", userHandler.DeleteAccount)
 		}
 	}
 }

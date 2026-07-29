@@ -291,6 +291,34 @@ func (h *UserHandler) SyncMetaClick(ctx *gin.Context) {
 	api.HandleSuccess(ctx, nil)
 }
 
+// DeleteAccount godoc
+// @Summary Delete user account
+// @Schemes
+// @Description Permanently delete the authenticated user's account (soft delete)
+// @Tags user
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param X-Site-Id header string true "Site ID"
+// @Param Authorization header string true "Bearer user token"
+// @Success 200 {object} api.Response "Account deleted successfully"
+// @Router /api/user/delete-account [post]
+func (h *UserHandler) DeleteAccount(ctx *gin.Context) {
+	userID := ctx.GetString("user_id")
+	if userID == "" {
+		api.HandleErrorWithHttpCode(ctx, http.StatusUnauthorized, common.ErrUnauthorized, nil)
+		return
+	}
+
+	if err := h.userService.DeleteAccount(ctx, userID); err != nil {
+		log.Error(ctx, "failed to delete user account: "+err.Error())
+		api.HandleError(ctx, err, nil)
+		return
+	}
+
+	api.HandleSuccess(ctx, nil)
+}
+
 // SyncPixel godoc
 // @Summary Sync user Facebook Pixel ID
 // @Description Persist the effective Facebook Pixel ID on the user for browser Pixel and CAPI attribution

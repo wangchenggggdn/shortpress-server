@@ -20,6 +20,7 @@ type UserRepository interface {
 	UpdatePremiumType(ctx context.Context, userID string, premiumType int, expiresAt *time.Time, onetimeSub *int8) error
 	GetSiteUsers(ctx context.Context, query *model.UserQuery, page, pageSize, sortType int) ([]*model.UserInfoView, int64, error)
 	Delete(ctx context.Context, userID string) error
+	SoftDelete(ctx context.Context, userID string) error
 	UpdateIdentifierAndEmail(ctx context.Context, user *model.User) error
 	UpdateMetaClickIds(ctx context.Context, userID, fbc, fbp, fbclid string) error
 	UpdatePixelID(ctx context.Context, userID, pixelID string) error
@@ -203,7 +204,18 @@ func (r *userRepository) GetSiteUsers(ctx context.Context, query *model.UserQuer
 // Delete completely removes a user and all related records from the database
 func (r *userRepository) Delete(ctx context.Context, userID string) error {
 	return r.DB(ctx).Where("user_id = ?", userID).Delete(&model.User{}).Error
+}
 
+// SoftDelete marks a user as deleted and clears email/identifier so the address can be re-registered.
+func (r *userRepository) SoftDelete(ctx context.Context, userID string) error {
+	return r.DB(ctx).Model(&model.User{}).
+		Where("user_id = ?", userID).
+		Updates(map[string]interface{}{
+			"status":     model.UserStatusDeleted,
+			"email":      "",
+			"identifier": "",
+			"updated_at": time.Now(),
+		}).Error
 }
 
 // UpdatePremiumType updates the premium type for a user. onetimeSub 非 nil 时同时更新 onetime_sub。

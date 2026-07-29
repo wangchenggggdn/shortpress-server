@@ -33,6 +33,7 @@ type UserService interface {
 	ChangePassword(ctx *gin.Context, userID string, newPassword string) error
 	SyncMetaClick(ctx *gin.Context, userID string, req *api.MetaClickSyncRequest) error
 	SyncPixel(ctx *gin.Context, userID string, req *api.PixelSyncRequest) (*api.PixelSyncResponseData, error)
+	DeleteAccount(ctx *gin.Context, userID string) error
 }
 
 type userService struct {
@@ -632,6 +633,20 @@ func (s *userService) SyncMetaClick(ctx *gin.Context, userID string, req *api.Me
 		EventSourceURL: req.EventSourceURL,
 	}
 	return analytics.PersistUserMetaClick(ctx, s.userRepository, userID, payload)
+}
+
+// DeleteAccount soft-deletes the authenticated user's account.
+// It sets status to deleted and clears email/identifier so the address can be re-registered.
+func (s *userService) DeleteAccount(ctx *gin.Context, userID string) error {
+	user, err := s.userRepository.GetByUserID(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if user == nil {
+		return common.ErrUserNotFound
+	}
+
+	return s.userRepository.SoftDelete(ctx, userID)
 }
 
 // SyncPixel persists the effective Facebook Pixel ID on the user row.
