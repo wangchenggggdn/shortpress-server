@@ -207,13 +207,14 @@ func (r *userRepository) Delete(ctx context.Context, userID string) error {
 }
 
 // SoftDelete marks a user as deleted and clears email/identifier so the address can be re-registered.
+// Uses "deleted:<userID>" as a placeholder to avoid unique index conflicts.
 func (r *userRepository) SoftDelete(ctx context.Context, userID string) error {
 	return r.DB(ctx).Model(&model.User{}).
 		Where("user_id = ?", userID).
 		Updates(map[string]interface{}{
 			"status":     model.UserStatusDeleted,
-			"email":      "",
-			"identifier": "",
+			"email":      "deleted:" + userID,
+			"identifier": "deleted:" + userID,
 			"updated_at": time.Now(),
 		}).Error
 }
