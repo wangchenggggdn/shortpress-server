@@ -122,7 +122,8 @@ func (h *CoinsHandler) PkgClientList(ctx *gin.Context) {
 		return
 	}
 
-	packages, err := h.coinsService.ListPackages(ctx, siteID, 1)
+	isIOS := ctx.GetHeader("X-Client-Platform") == "ios"
+	packages, err := h.coinsService.ListPackages(ctx, siteID, 1, isIOS)
 	if err != nil {
 		api.HandleError(ctx, err, "Failed to list coin packages")
 		return
@@ -147,7 +148,7 @@ func (h *CoinsHandler) ListCoinPackage(ctx *gin.Context) {
 		return
 	}
 
-	packages, err := h.coinsService.ListPackages(ctx, siteID, -1)
+	packages, err := h.coinsService.ListPackages(ctx, siteID, -1, false)
 	if err != nil {
 		api.HandleError(ctx, err, nil)
 		return

@@ -8,8 +8,8 @@ import (
 	"shortpress-server/internal/middleware"
 	"shortpress-server/internal/repository/db/user"
 	"shortpress-server/internal/service/analytics"
-	"shortpress-server/internal/service/payment/stripe"
 	paypalservice "shortpress-server/internal/service/payment/paypal"
+	"shortpress-server/internal/service/payment/stripe"
 	"shortpress-server/internal/service/payment/sub"
 	"shortpress-server/pkg/log"
 	"strconv"
@@ -157,7 +157,7 @@ func (h *SubscriptionHandler) ListSubscriptions(ctx *gin.Context) {
 	}
 
 	// List packages
-	packages, err := h.subscriptionService.ListBySiteID(ctx, siteID, status)
+	packages, err := h.subscriptionService.ListBySiteID(ctx, siteID, status, false)
 	if err != nil {
 		log.Error(ctx, "Failed to list subscription packages: "+err.Error())
 		api.HandleError(ctx, err, nil)
@@ -225,7 +225,8 @@ func (h *SubscriptionHandler) ListClientSubscriptions(ctx *gin.Context) {
 	}
 
 	// Only list active packages (status = 1) for client-side
-	packages, err := h.subscriptionService.ListBySiteID(ctx, siteID, 1)
+	isIOS := ctx.GetHeader("X-Client-Platform") == "ios"
+	packages, err := h.subscriptionService.ListBySiteID(ctx, siteID, 1, isIOS)
 	if err != nil {
 		log.Error(ctx, "Failed to list subscription packages: "+err.Error())
 		api.HandleError(ctx, err, nil)

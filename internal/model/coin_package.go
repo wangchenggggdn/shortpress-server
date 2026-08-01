@@ -23,6 +23,7 @@ type CoinPackage struct {
 	PaypalProductID string    `gorm:"column:paypal_product_id"`
 	IOSProductID    string    `gorm:"column:ios_product_id"`   // ios_product_id
 	Status          int       `gorm:"column:status;default:1"` // 1:active, 2:disabled
+	StatusIOS       int       `gorm:"column:status_ios;default:1" json:"-"`
 	CreatedAt       time.Time `gorm:"column:created_at;autoCreateTime"`
 	UpdatedAt       time.Time `gorm:"column:updated_at;autoUpdateTime"`
 }

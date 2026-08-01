@@ -37,7 +37,7 @@ type CoinsService interface {
 	GetTransactionHistory(ctx context.Context, userID, siteID string, page, pageSize int) (*api.CoinTransactionHistoryResponse, error)
 
 	// ListPackages gets all available coin packages for a site
-	ListPackages(ctx context.Context, siteID string, status int) ([]*api.CoinPackageResponseData, error)
+	ListPackages(ctx context.Context, siteID string, status int, isIOS bool) ([]*api.CoinPackageResponseData, error)
 
 	// GetContentUnlockHistory gets a user's content unlock history
 	GetContentUnlockHistory(ctx context.Context, userID, siteID string, page, pageSize int) (*api.VideoUnlockHistoryResponse, error)
@@ -296,9 +296,9 @@ func (s *coinsService) GetTransactionHistory(ctx context.Context, userID, siteID
 }
 
 // ListPackages gets all available coin packages for a site
-func (s *coinsService) ListPackages(ctx context.Context, siteID string, status int) ([]*api.CoinPackageResponseData, error) {
+func (s *coinsService) ListPackages(ctx context.Context, siteID string, status int, isIOS bool) ([]*api.CoinPackageResponseData, error) {
 	// Get the coin packages from repository
-	packages, err := s.coinPackageRepo.ListBySiteID(ctx, siteID, status)
+	packages, err := s.coinPackageRepo.ListBySiteID(ctx, siteID, status, isIOS)
 	if err != nil {
 		return nil, err
 	}
@@ -306,6 +306,10 @@ func (s *coinsService) ListPackages(ctx context.Context, siteID string, status i
 	// Convert to API response format
 	var result []*api.CoinPackageResponseData
 	for _, pkg := range packages {
+		responseStatus := pkg.Status
+		if isIOS {
+			responseStatus = pkg.StatusIOS
+		}
 		result = append(result, &api.CoinPackageResponseData{
 			PackageID:          pkg.PackageID,
 			Name:               pkg.Name,
@@ -316,7 +320,7 @@ func (s *coinsService) ListPackages(ctx context.Context, siteID string, status i
 			OriginalPrice:      types.FromCents(pkg.OriginalPrice),
 			Currency:           pkg.Currency,
 			DiscountPercentage: pkg.DiscountPercentage,
-			Status:             pkg.Status,
+			Status:             responseStatus,
 			IOSProductID:       pkg.IOSProductID,
 		})
 	}
@@ -750,7 +754,7 @@ func (s *coinsService) UpdateCoinPackage(ctx context.Context, coinPackage *model
 // 只对支付充值（CoinSourcePurchase）进行验证
 func (s *coinsService) validateCoinPackage(ctx context.Context, siteID string, amount int) error {
 	// 1. 查询该站点所有启用的充值套餐
-	packages, err := s.coinPackageRepo.ListBySiteID(ctx, siteID, 1) // status=1 表示启用
+	packages, err := s.coinPackageRepo.ListBySiteID(ctx, siteID, 1, false) // status=1 表示启用
 	if err != nil {
 		return fmt.Errorf("failed to query coin packages: %w", err)
 	}

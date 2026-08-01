@@ -20,12 +20,13 @@ type SubscriptionPackage struct {
 	// StripeProductID    string     `gorm:"column:stripe_product_id" json:"stripe_product_id"`
 	// StripePriceID      string     `gorm:"column:stripe_price_id" json:"stripe_price_id"`
 	// PaypalPlanID       string     `gorm:"column:paypal_plan_id" json:"paypal_plan_id"`
-	IOSProductID string    `gorm:"column:ios_product_id" json:"ios_product_id"`
-	Status       int       `gorm:"column:status;default:1" json:"status"` // 1:enabled 2:disabled
-	Coins        int       `gorm:"column:coins;default:0" json:"coins"`   // Coins granted with subscription
+	IOSProductID string          `gorm:"column:ios_product_id" json:"ios_product_id"`
+	Status       int             `gorm:"column:status;default:1" json:"status"` // 1:enabled 2:disabled
+	StatusIOS    int             `gorm:"column:status_ios;default:1" json:"-"`
+	Coins        int             `gorm:"column:coins;default:0" json:"coins"`   // Coins granted with subscription
 	Rights       json.RawMessage `gorm:"column:rights;type:json" json:"rights"` // Subscription benefits/rights
-	CreatedAt    time.Time `gorm:"column:created_at;->;<-:create" json:"created_at"`
-	UpdatedAt    time.Time `gorm:"column:updated_at;->;<-:update" json:"updated_at"`
+	CreatedAt    time.Time       `gorm:"column:created_at;->;<-:create" json:"created_at"`
+	UpdatedAt    time.Time       `gorm:"column:updated_at;->;<-:update" json:"updated_at"`
 }
 
 // TableName returns the table name for the model

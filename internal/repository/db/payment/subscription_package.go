@@ -13,7 +13,7 @@ type SubscriptionPackageRepository interface {
 	db.BaseOperation
 	GetByPackageID(ctx context.Context, packageID string) (*model.SubscriptionPackage, error)
 	GetByIOSProductID(ctx context.Context, iosProductID string) (*model.SubscriptionPackage, error)
-	ListBySiteID(ctx context.Context, siteID string, status int) ([]*model.SubscriptionPackage, error)
+	ListBySiteID(ctx context.Context, siteID string, status int, isIOS bool) ([]*model.SubscriptionPackage, error)
 	ListByStatus(ctx context.Context, status int) ([]*model.SubscriptionPackage, error)
 }
 
@@ -69,11 +69,15 @@ func (r *subscriptionPackageRepository) GetByIOSProductID(ctx context.Context, i
 	return &pkg, nil
 }
 
-func (r *subscriptionPackageRepository) ListBySiteID(ctx context.Context, siteID string, status int) ([]*model.SubscriptionPackage, error) {
+func (r *subscriptionPackageRepository) ListBySiteID(ctx context.Context, siteID string, status int, isIOS bool) ([]*model.SubscriptionPackage, error) {
 	var packages []*model.SubscriptionPackage
 	query := r.DB(ctx).Where("site_id = ?", siteID)
 	if status != -1 {
-		query = query.Where("status = ?", status)
+		if isIOS {
+			query = query.Where("status_ios = ?", status)
+		} else {
+			query = query.Where("status = ?", status)
+		}
 	}
 	err := query.Find(&packages).Error
 	if err != nil {

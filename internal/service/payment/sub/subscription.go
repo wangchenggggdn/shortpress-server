@@ -38,7 +38,7 @@ type SubscriptionService interface {
 	CreateSubscriptionPackage(ctx context.Context, siteID string, req *api.SubscriptionData) (*api.SubscriptionData, error)
 
 	// ListBySiteID lists all subscription packages for a site
-	ListBySiteID(ctx context.Context, siteID string, status int) ([]*api.SubscriptionData, error)
+	ListBySiteID(ctx context.Context, siteID string, status int, isIOS bool) ([]*api.SubscriptionData, error)
 
 	// UpdateSubscriptionPackage updates a subscription package (only name, description and status can be updated)
 	UpdateSubscriptionPackage(ctx context.Context, packageID string, req *api.SubscriptionData) error
@@ -136,10 +136,10 @@ func (s *subscriptionService) CreateSubscriptionPackage(ctx context.Context, sit
 }
 
 // ListBySiteID lists all subscription packages for a site
-func (s *subscriptionService) ListBySiteID(ctx context.Context, siteID string, status int) ([]*api.SubscriptionData, error) {
+func (s *subscriptionService) ListBySiteID(ctx context.Context, siteID string, status int, isIOS bool) ([]*api.SubscriptionData, error) {
 	// In this implementation, we're using creatorID as siteID to match the interface
 	// This assumes the Site ID matches the Creator ID in your system
-	packages, err := s.subscriptionPackageRepo.ListBySiteID(ctx, siteID, status)
+	packages, err := s.subscriptionPackageRepo.ListBySiteID(ctx, siteID, status, isIOS)
 	if err != nil {
 		return nil, err
 	}
@@ -147,6 +147,10 @@ func (s *subscriptionService) ListBySiteID(ctx context.Context, siteID string, s
 	// Convert model.SubscriptionPackage to api.SubscriptionPackageResponse
 	var responses []*api.SubscriptionData
 	for _, pkg := range packages {
+		responseStatus := pkg.Status
+		if isIOS {
+			responseStatus = pkg.StatusIOS
+		}
 		response := &api.SubscriptionData{
 			PackageID:          pkg.PackageID,
 			SiteID:             pkg.SiteID,
@@ -159,7 +163,7 @@ func (s *subscriptionService) ListBySiteID(ctx context.Context, siteID string, s
 			DiscountPercentage: pkg.DiscountPercentage,
 			Coins:              pkg.Coins,
 			Rights:             pkg.Rights,
-			Status:             pkg.Status,
+			Status:             responseStatus,
 			IOSProductID:       pkg.IOSProductID,
 			CreatedAt:          pkg.CreatedAt.Unix(),
 		}
