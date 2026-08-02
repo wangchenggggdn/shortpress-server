@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"shortpress-server/pkg/oauth2"
 	"strings"
 	"time"
@@ -320,6 +321,10 @@ func (s *userService) register(ctx *gin.Context, args *registerArgs) (string, er
 		return "", err
 	}
 	log.AddNotice(ctx, "pixel_id", pixelID)
+	utmCampaign, utmContent, adName := registrationAttribution(ctx)
+	log.AddNotice(ctx, "utm_campaign", utmCampaign)
+	log.AddNotice(ctx, "utm_content", utmContent)
+	log.AddNotice(ctx, "ad_name", adName)
 
 	platform := strings.ToLower(strings.TrimSpace(ctx.GetHeader("X-Client-Type")))
 	log.AddNotice(ctx, "platform", platform)
@@ -336,6 +341,9 @@ func (s *userService) register(ctx *gin.Context, args *registerArgs) (string, er
 		UpdatedAt:   time.Now(),
 		Referer:     referer,
 		PixelID:     pixelID,
+		UTMCampaign: utmCampaign,
+		UTMContent:  utmContent,
+		AdName:      adName,
 		Platform:    platform,
 		LastLoginAt: &now,
 		Ver:         appVersion,
@@ -518,6 +526,22 @@ func (s *userService) GetUserProfile(ctx *gin.Context, userID string) (*api.User
 		PixelID:          user.PixelID,
 		Ver:              user.Ver,
 	}, nil
+}
+
+func registrationAttribution(ctx *gin.Context) (utmCampaign, utmContent, adName string) {
+	query := ctx.Request.URL.Query()
+	refererQuery := url.Values{}
+	if referer, err := url.Parse(ctx.Request.Referer()); err == nil {
+		refererQuery = referer.Query()
+	}
+
+	value := func(key string) string {
+		if direct := strings.TrimSpace(query.Get(key)); direct != "" {
+			return direct
+		}
+		return strings.TrimSpace(refererQuery.Get(key))
+	}
+	return value("utm_campaign"), value("utm_content"), value("ad_name")
 }
 
 func (s *userService) resolveRequestPixelID(ctx *gin.Context, siteID string) (string, error) {

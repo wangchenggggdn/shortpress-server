@@ -6,26 +6,29 @@ import (
 
 // User represents a C-end user in the system
 type User struct {
-	ID               uint       `gorm:"column:id;primaryKey;autoIncrement" json:"-"`
-	UserID           string     `gorm:"column:user_id;uniqueIndex:uk_user_id" json:"user_id"`
-	Email            string     `gorm:"column:email" json:"email"`
-	Identifier       string     `gorm:"column:identifier" json:"identifier"`
-	SiteID           string     `gorm:"column:site_id;index:idx_site_id" json:"site_id"`
-	Status           int8       `gorm:"column:status;default:1;index:idx_status" json:"status"`
-	LastLoginAt      *time.Time `gorm:"column:last_login_at" json:"last_login_at"`
-	CreatedAt        time.Time  `gorm:"column:created_at;index:idx_created_at" json:"created_at"`
-	PremiumType      int8       `gorm:"column:premium_type;not null;default:0" json:"premium_type"`
-	OnetimeSub       int8       `gorm:"column:onetime_sub;not null;default:0" json:"onetime_sub"` // 1: 一次性订阅用户
-	PremiumExpiresAt *time.Time `gorm:"column:premium_expires_at" json:"premium_expires_at,omitempty"`
-	Referer              string     `gorm:"column:referer" json:"referer"`
-	PixelID              string     `gorm:"column:pixel_id" json:"pixelId"`
-	Platform             string     `gorm:"column:platform" json:"platform"` // web / ios / android, from X-Client-Type
-	MetaFbc              string     `gorm:"column:meta_fbc" json:"metaFbc"`
-	MetaFbp              string     `gorm:"column:meta_fbp" json:"metaFbp"`
-	MetaFbclid           string     `gorm:"column:meta_fbclid" json:"metaFbclid"`
-	MetaClickCapturedAt  *time.Time `gorm:"column:meta_click_captured_at" json:"metaClickCapturedAt"`
-	UpdatedAt            time.Time  `gorm:"column:updated_at" json:"updated_at"`
-	Ver              string     `gorm:"column:ver" json:"ver"`
+	ID                  uint       `gorm:"column:id;primaryKey;autoIncrement" json:"-"`
+	UserID              string     `gorm:"column:user_id;uniqueIndex:uk_user_id" json:"user_id"`
+	Email               string     `gorm:"column:email" json:"email"`
+	Identifier          string     `gorm:"column:identifier" json:"identifier"`
+	SiteID              string     `gorm:"column:site_id;index:idx_site_id" json:"site_id"`
+	Status              int8       `gorm:"column:status;default:1;index:idx_status" json:"status"`
+	LastLoginAt         *time.Time `gorm:"column:last_login_at" json:"last_login_at"`
+	CreatedAt           time.Time  `gorm:"column:created_at;index:idx_created_at" json:"created_at"`
+	PremiumType         int8       `gorm:"column:premium_type;not null;default:0" json:"premium_type"`
+	OnetimeSub          int8       `gorm:"column:onetime_sub;not null;default:0" json:"onetime_sub"` // 1: 一次性订阅用户
+	PremiumExpiresAt    *time.Time `gorm:"column:premium_expires_at" json:"premium_expires_at,omitempty"`
+	Referer             string     `gorm:"column:referer" json:"referer"`
+	PixelID             string     `gorm:"column:pixel_id" json:"pixelId"`
+	UTMCampaign         string     `gorm:"column:utm_campaign" json:"utmCampaign"`
+	UTMContent          string     `gorm:"column:utm_content" json:"utmContent"`
+	AdName              string     `gorm:"column:ad_name" json:"adName"`
+	Platform            string     `gorm:"column:platform" json:"platform"` // web / ios / android, from X-Client-Type
+	MetaFbc             string     `gorm:"column:meta_fbc" json:"metaFbc"`
+	MetaFbp             string     `gorm:"column:meta_fbp" json:"metaFbp"`
+	MetaFbclid          string     `gorm:"column:meta_fbclid" json:"metaFbclid"`
+	MetaClickCapturedAt *time.Time `gorm:"column:meta_click_captured_at" json:"metaClickCapturedAt"`
+	UpdatedAt           time.Time  `gorm:"column:updated_at" json:"updated_at"`
+	Ver                 string     `gorm:"column:ver" json:"ver"`
 }
 
 // TableName specifies the table name for User model
