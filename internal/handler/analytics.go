@@ -234,7 +234,7 @@ func (h *AnalyticsHandler) Creations(ctx *gin.Context) {
 		req.PageSize = 20
 	}
 
-	response, err := h.analyticsService.GetCreations(ctx, req.SiteID, req.Page, req.PageSize)
+	response, err := h.analyticsService.GetCreations(ctx, req.SiteID, req.UserID, req.Page, req.PageSize)
 	if err != nil {
 		log.Error(ctx, fmt.Sprintf("Service error in creations query: %v", err))
 		api.HandleError(ctx, common.ErrInternalServerError, nil)

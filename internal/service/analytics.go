@@ -30,7 +30,7 @@ type AnalyticsService interface {
 	// GetTransactionByID retrieves a specific payment transaction by its ID
 	GetTransactionByID(ctx *gin.Context, transactionID string) (*api.IncomeTransactionDetailResponse, error)
 	// GetCreations lists recent user creation records for a site from generate Redis.
-	GetCreations(ctx *gin.Context, siteID string, page, pageSize int) (*api.CreationsResponse, error)
+	GetCreations(ctx *gin.Context, siteID, userID string, page, pageSize int) (*api.CreationsResponse, error)
 }
 
 type analyticsService struct {
@@ -292,7 +292,7 @@ type generateCreationsUpstream struct {
 }
 
 // GetCreations lists recent user creation records for a site from generate Redis.
-func (s *analyticsService) GetCreations(ctx *gin.Context, siteID string, page, pageSize int) (*api.CreationsResponse, error) {
+func (s *analyticsService) GetCreations(ctx *gin.Context, siteID, userID string, page, pageSize int) (*api.CreationsResponse, error) {
 	if s.generateServiceURL == "" {
 		return nil, fmt.Errorf("generate service url is not configured")
 	}
@@ -307,6 +307,9 @@ func (s *analyticsService) GetCreations(ctx *gin.Context, siteID string, page, p
 	q.Set("site_id", siteID)
 	q.Set("page", strconv.Itoa(page))
 	q.Set("page_size", strconv.Itoa(pageSize))
+	if userID = strings.TrimSpace(userID); userID != "" {
+		q.Set("user_id", userID)
+	}
 	endpoint := s.generateServiceURL + "/creations?" + q.Encode()
 
 	req, err := http.NewRequestWithContext(ctx.Request.Context(), http.MethodGet, endpoint, nil)

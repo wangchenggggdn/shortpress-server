@@ -76,6 +76,7 @@ type IncomeTransactionDetailResponse struct {
 
 type CreationsRequest struct {
 	SiteID   string `json:"siteId" binding:"required"`
+	UserID   string `json:"userId"` // Optional user ID for filtering
 	Page     int    `json:"page"`
 	PageSize int    `json:"pageSize"`
 }
